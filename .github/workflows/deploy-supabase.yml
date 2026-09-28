@@ -1,0 +1,49 @@
+name: Deploy Supabase Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Functions
+        run: |
+          supabase functions deploy vendor-dashboard \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy place-order \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy sign-up \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy sign-in \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy notify-login \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Push Database Migrations
+        if: hashFiles('supabase/migrations/**/*.sql') != ''
+        run: |
+          supabase db push \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
