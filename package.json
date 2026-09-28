@@ -1,0 +1,29 @@
+{
+  "name": "jenganasi-tanzania",
+  "version": "1.0.0",
+  "description": "Tanzania's premium marketplace for construction materials",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . -l 3000",
+    "build": "echo 'Static site - no build step required'",
+    "lint": "npx htmlhint index.html legal.html --config .htmlhintrc",
+    "deploy:vercel": "vercel --prod",
+    "deploy:vercel:preview": "vercel",
+    "deploy:supabase": "supabase functions deploy --project-ref $SUPABASE_PROJECT_REF",
+    "deploy:pages": "node deploy.js",
+    "test": "echo 'No tests configured' && exit 0"
+  },
+  "devDependencies": {
+    "htmlhint": "^1.1.4",
+    "serve": "^14.2.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "libsodium-wrappers": "^0.8.4",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
+  }
+}
