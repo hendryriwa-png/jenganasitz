@@ -1,0 +1,27 @@
+{
+  "name": "JengaNasi Tanzania",
+  "short_name": "JengaNasi",
+  "description": "Tanzania's premium marketplace for construction materials. Compare, order, and get building supplies delivered from verified vendors nationwide.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192'%3E%3Crect fill='%23f59e0b' width='192' height='192'/%3E%3Ctext x='96' y='104' font-family='Arial' font-size='80' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJN%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512'%3E%3Crect fill='%23f59e0b' width='512' height='512'/%3E%3Ctext x='256' y='272' font-family='Arial' font-size='200' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJN%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "business", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}
