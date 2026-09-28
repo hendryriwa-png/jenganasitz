@@ -3935,6 +3935,11 @@ async function handleAuthSubmit(e, formType){
           const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password, options: { data: { name, role: 'customer', phone: form.phone.value.trim(), nationalId: form.nationalId.value.trim(), tin: form.tin.value.trim(), paymentAccount: form.paymentAccount.value.trim() } } });
           if(authError) throw new Error(authError.message);
           if(authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
+          // Create customer profile
+          const userId = authData.user.id;
+          const customerData = { id: userId, email, name, role: 'customer', phone: form.phone.value.trim(), nationalId: form.nationalId.value.trim(), tin: form.tin.value.trim(), paymentAccount: form.paymentAccount.value.trim() };
+          const { error: profileError } = await _supabase.from('customers').insert(customerData);
+          if(profileError) console.warn('Profile creation failed:', profileError.message);
           currentUser = { name, email, role: 'customer' };
         }
       }
