@@ -2402,6 +2402,15 @@ function clearSession(){
   try{localStorage.removeItem('jenganasi_session');}catch(e){}
   currentUser=null;
 }
+async function getUserProfile(userId){
+  try{
+    const { data, error } = await _supabase.from('vendors').select('id,name,email,role').eq('id', userId).single();
+    if(!error && data) return { ...data, role: 'vendor' };
+    const { data: custData, error: custError } = await _supabase.from('customers').select('id,name,email,role').eq('id', userId).single();
+    if(!custError && custData) return { ...custData, role: 'customer' };
+  }catch(e){}
+  return null;
+}
 function loadCachedData(){
   const p=cacheGet('products');if(p)vendorProducts=p;
   const v=cacheGet('vendors');if(v)vendorAccounts=v;
@@ -3923,20 +3932,9 @@ async function handleAuthSubmit(e, formType){
           addDemoUser(user);
           currentUser = { name, email, role: 'customer' };
         }else{
-          const payload = {
-            email, password, name, role: 'customer',
-            phone: form.phone.value.trim(),
-            nationalId: form.nationalId.value.trim(),
-            tin: form.tin.value.trim(),
-            paymentAccount: form.paymentAccount.value.trim(),
-          };
-          const response = await fetch(`${SUPABASE_URL}/functions/v1/sign-up`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const data = await response.json();
-          if(!response.ok) throw new Error(data.error || 'Registration failed');
+          const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password, options: { data: { name, role: 'customer', phone: form.phone.value.trim(), nationalId: form.nationalId.value.trim(), tin: form.tin.value.trim(), paymentAccount: form.paymentAccount.value.trim() } } });
+          if(authError) throw new Error(authError.message);
+          if(authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
           currentUser = { name, email, role: 'customer' };
         }
       }
@@ -3964,13 +3962,10 @@ async function handleAuthSubmit(e, formType){
           hideLoading();
           return;
         }
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/sign-in`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, isAdmin: true })
-        });
-        const data = await response.json();
-        if(!response.ok) throw new Error(data.error || 'Invalid admin credentials');
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        if(error) throw new Error(error.message);
+        const user = data.user;
+        if(user?.app_metadata?.role !== 'admin') throw new Error('Not admin');
         adminLoggedIn = true;
         adminSessionType = 'owner';
         adminFailCount = 0;
@@ -3994,15 +3989,18 @@ async function handleAuthSubmit(e, formType){
         if(user.password !== hashedInput){ showToast('Invalid email or password','danger'); return; }
         currentUser = { name: user.name, email: user.email, role: user.role, vendorEmail: user.role === 'vendor' ? user.email : null };
       }else{
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/sign-in`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await response.json();
-        if(!response.ok) throw new Error(data.error || 'Invalid email or password');
-        currentUser = data.user;
-        if(data.session) sessionStorage.setItem('sb_session', JSON.stringify(data.session));
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        if(error) throw new Error(error.message);
+        const session = data.session;
+        const user = data.user;
+        if(session) sessionStorage.setItem('sb_session', JSON.stringify(session));
+        // Get user profile from database
+        const profile = await getUserProfile(user.id);
+        if(profile){
+          currentUser = { name: profile.name, email: user.email, role: profile.role, vendorEmail: profile.role === 'vendor' ? user.email : null };
+        }else{
+          currentUser = { name: user.user_metadata?.name || user.email.split('@')[0], email: user.email, role: user.app_metadata?.role || 'customer', vendorEmail: user.app_metadata?.role === 'vendor' ? user.email : null };
+        }
       }
     }
     closeModal('authModal');
