@@ -24,26 +24,19 @@ jobs:
           version: latest
 
       - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase functions deploy vendor-dashboard \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase functions deploy place-order \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase functions deploy sign-up \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase functions deploy sign-in \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase functions deploy notify-login \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy vendor-dashboard
+          supabase functions deploy place-order
+          supabase functions deploy sign-up
+          supabase functions deploy sign-in
+          supabase functions deploy notify-login
 
       - name: Push Database Migrations
         if: hashFiles('supabase/migrations/**/*.sql') != ''
-        run: |
-          supabase db push \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: supabase db push
