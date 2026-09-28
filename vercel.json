@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'Static site - no build step'",
+  "buildCommand": "echo 'Static site - no build step required'",
   "outputDirectory": ".",
   "devCommand": "npx serve . -l 3000",
   "installCommand": "npm install",
@@ -41,11 +41,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "supabase/functions/**/*.ts": {
-      "runtime": "edge",
-      "maxDuration": 30
-    }
-  }
+  ]
 }
