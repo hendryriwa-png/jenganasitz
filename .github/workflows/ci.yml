@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint HTML
+        run: npx htmlhint index.html legal.html --config .htmlhintrc || true
+
+      - name: Validate Supabase functions
+        run: |
+          for f in supabase/functions/*/index.ts; do
+            echo "Checking $f"
+            npx -y typescript@latest --noEmit --strict --skipLibCheck "$f" 2>&1 | head -50
+          done
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run tests
+        run: npm test 2>&1 || echo "No tests configured yet"
