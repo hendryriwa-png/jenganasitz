@@ -3827,24 +3827,26 @@ async function handleSignIn(e){
   if(!email || !password){ showToast('Please fill in all fields','danger'); return; }
   showLoading('Signing in...');
   try{
+    // Admin login with specific credentials
+    if(email === 'hendryriwa@icloud.com' && password === 'Hc13062002!'){
+      adminLoggedIn = true;
+      adminSessionType = 'owner';
+      adminFailCount = 0;
+      try{ sessionStorage.setItem('jn_admin_sess','1'); }catch(err2){}
+      closeModal('authModal');
+      form.reset();
+      updateAuthUI();
+      openAdminDashboard();
+      showToast('Welcome back, Admin!');
+      notifyLoginAlert('admin', email, 'success');
+      initPush();
+      hideLoading();
+      return;
+    }
+    
     if(email === ADMIN_EMAIL){
-      // Admin sign in
+      // Admin sign in via Supabase
       if(demoMode){
-        if(email === 'admin@jenganasi.co.tz' && password === 'admin123'){
-          adminLoggedIn = true;
-          adminSessionType = 'owner';
-          adminFailCount = 0;
-          try{ sessionStorage.setItem('jn_admin_sess','1'); }catch(err2){}
-          closeModal('authModal');
-          form.reset();
-          updateAuthUI();
-          openAdminDashboard();
-          showToast('Welcome back, Admin!');
-          notifyLoginAlert('admin', email, 'success');
-          initPush();
-          hideLoading();
-          return;
-        }
         showToast('Invalid admin credentials','danger');
         hideLoading();
         return;
