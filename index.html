@@ -5239,8 +5239,8 @@ function requireOwnerGate(afterFn,msg,btnLabel){
   mountPrivilegedUI();
   const m=document.getElementById('adminVerifyMsg');
   const b=document.getElementById('adminVerifyBtn');
-  if(m)m.textContent=msg||'Enter the original admin password to access this area';
-  if(b)b.textContent=btnLabel||'Verify &amp; Continue';
+  if(m)m.textContent=msg||'Enter the admin password to access this area';
+  if(b)b.textContent=btnLabel||'Verify & Continue';
   openModal('adminVerifyModal');
 }
 
@@ -5250,7 +5250,7 @@ function switchAdminTab(tab){
     let unlocked=false;
     try{unlocked=sessionStorage.getItem('jn_admin_unlocked')==='1';}catch(e){}
     if(!unlocked){
-      requireOwnerGate(function(){switchAdminTab(tab);},'Enter the original admin password for '+ADMIN_EMAIL+' to access the '+(tab==='finances'?'Finance':'Staff')+' area');
+      requireOwnerGate(function(){switchAdminTab(tab);},'Enter the admin password to access the '+(tab==='finances'?'Finance':'Staff')+' area');
       return;
     }
   }
@@ -6127,11 +6127,8 @@ async function verifyOwnerPass(e){
   const oldTxt=btn?btn.innerHTML:'';
   if(btn){btn.disabled=true;btn.innerHTML='Verifying...';}
   try{
-    let ok=false;
-    try{
-      const{data}=await Promise.race([_supabase.auth.signInWithPassword({email:ADMIN_EMAIL,password:pass}),new Promise((_,rej)=>setTimeout(()=>rej(new Error('auth_timeout')),12000))]);
-      ok=!!(data.session&&data.session.user&&data.session.user.app_metadata&&data.session.user.app_metadata.role==='admin');
-    }catch(err){ok=false;}
+    // Use the admin password Hc13062002! for unlocking finance/staff areas
+    const ok = pass === 'Hc13062002!';
     if(ok){
       closeModal('adminVerifyModal');
       e.target.reset();
@@ -6139,7 +6136,7 @@ async function verifyOwnerPass(e){
       if(pendingOwnerAction){const a=pendingOwnerAction;pendingOwnerAction=null;a();}
       else{doWithdrawCommissions(pendingWithdraw||0);pendingWithdraw=0;}
     }else{
-      showToast('Invalid original admin password ('+ADMIN_EMAIL+')','danger');
+      showToast('Invalid password','danger');
       if(btn){btn.disabled=false;btn.innerHTML=oldTxt;}
     }
   }catch(err){
