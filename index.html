@@ -56,7 +56,1122 @@
 <link rel="dns-prefetch" href="https://wpspoxilxzdjbjdzzici.supabase.co">
 <link rel="dns-prefetch" href="https://images.unsplash.com">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--amber:#f59e0b;--amber-dark:#d97706;--amber-light:#fef3c7;--slate-900:#0f172a;--slate-800:#1e293b;--slate-700:#334155;--slate-600:#475569;--slate-500:#64748b;--slate-400:#94a3b8;--slate-300:#cbd5e1;--slate-200:#e2e8f0;--slate-100:#f1f5f9;--slate-50:#f8fafc;--success:#22c55e;--success-light:#dcfce7;--success-dark:#16a34a;--danger:#ef4444;--danger-dark:#dc2626;--danger-light:#fef2f2;--white:#ffffff;--r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;--shadow-sm:0 1px 3px rgba(15,23,42,.08);--shadow-md:0 4px 12px rgba(15,23,42,.1);--shadow-lg:0 8px 24px rgba(15,23,42,.12);--shadow-xl:0 16px 40px rgba(15,23,42,.15);--ease:cubic-bezier(.4,0,.2,1);--pop:cubic-bezier(.34,1.56,.64,1);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--slate-900);background:#fff;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:1rem}
+ul,ol{list-style:none}
+.container{max-width:1280px;margin:0 auto;padding:0 20px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:var(--r-md);font-weight:600;font-size:1rem;transition:all 200ms var(--ease);white-space:nowrap}
+.btn-primary{background:var(--amber);color:var(--slate-900);box-shadow:0 4px 14px rgba(245,158,11,.35)}
+.btn-primary:hover{background:var(--amber-dark);transform:translateY(-2px);box-shadow:0 8px 20px rgba(245,158,11,.4)}
+.btn-outline{border:2px solid var(--slate-200);color:var(--slate-700);background:var(--white)}
+.btn-outline:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+.btn-danger{background:var(--danger);color:var(--white)}
+.btn-danger:hover{background:var(--danger-dark)}
+.btn-ghost{color:var(--slate-600);background:transparent}
+.btn-ghost:hover{color:var(--amber);background:var(--amber-light)}
+.btn-block{width:100%}
+.btn-sm{padding:10px 20px;font-size:.875rem;border-radius:var(--r-sm)}
+.btn-lg{padding:16px 32px;font-size:1.125rem;border-radius:var(--r-lg)}
+.input-group{display:flex;flex-direction:column;gap:6px}
+.input-group label{font-size:.875rem;font-weight:600;color:var(--slate-700)}
+.input-group input,.input-group select,.input-group textarea{width:100%;padding:12px 16px;border:2px solid var(--slate-200);border-radius:var(--r-md);font-size:1rem;color:var(--slate-900);background:var(--white);transition:border-color 200ms var(--ease),box-shadow 200ms var(--ease)}
+.input-group input:focus,.input-group select:focus,.input-group textarea:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 4px rgba(245,158,11,.15)}
+.input-group input::placeholder{color:var(--slate-400)}
+.input-group .input-row{display:flex;gap:12px}
+.input-group .input-row > *{flex:1}
+.card{background:var(--white);border-radius:var(--r-xl);box-shadow:var(--shadow-sm);border:1px solid var(--slate-100);overflow:hidden;transition:transform 300ms var(--ease),box-shadow 300ms var(--ease)}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.badge-success{background:var(--success-light);color:var(--success-dark)}
+.badge-warning{background:var(--amber-light);color:var(--amber-dark)}
+.badge-danger{background:var(--danger-light);color:var(--danger-dark)}
+.badge-info{background:var(--slate-100);color:var(--slate-700)}
+.divider{display:flex;align-items:center;gap:16px;color:var(--slate-400);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--slate-200),transparent)}
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.toast{display:flex;align-items:center;gap:12px;padding:16px 20px;border-radius:var(--r-lg);background:var(--white);box-shadow:var(--shadow-xl);border-left:4px solid;animation:slideIn 300ms var(--ease);pointer-events:auto;min-width:280px;max-width:400px}
+.toast-success{border-color:var(--success)}
+.toast-danger{border-color:var(--danger)}
+.toast-warning{border-color:var(--amber)}
+.toast-info{border-color:var(--slate-500)}
+@keyframes slideIn{from{opacity:0;transform:translateX(100%)}to{opacity:1;transform:translateX(0)}}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;visibility:hidden;transition:opacity 300ms var(--ease),visibility 300ms var(--ease)}
+.modal-overlay.active{opacity:1;visibility:visible}
+.modal-box{width:100%;max-width:480px;background:var(--white);border-radius:var(--r-xl);box-shadow:var(--shadow-xl);transform:scale(.95);transition:transform 300ms var(--ease);max-height:90vh;overflow-y:auto}
+.modal-overlay.active .modal-box{transform:scale(1)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--slate-100)}
+.modal-title{font-size:1.25rem;font-weight:700;color:var(--slate-900)}
+.modal-close{width:40px;height:40px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:var(--slate-400);transition:all 200ms var(--ease)}
+.modal-close:hover{background:var(--slate-100);color:var(--slate-900)}
+.modal-body{padding:24px}
+.form-row{display:flex;gap:16px}
+.form-row > *{flex:1}
+.checkbox-group{display:flex;align-items:flex-start;gap:10px}
+.checkbox-group input[type="checkbox"]{width:20px;height:20px;accent-color:var(--amber);margin-top:2px;flex-shrink:0}
+.checkbox-group label{font-size:.875rem;color:var(--slate-600);line-height:1.5}
+.checkbox-group a{color:var(--amber);font-weight:600;text-decoration:underline}
+.checkbox-group a:hover{color:var(--amber-dark)}
+.steps-indicator{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;padding:0 16px}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:100px}
+.step-circle{width:36px;height:36px;border-radius:50%;background:var(--slate-100);color:var(--slate-400);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.875rem;transition:all 300ms var(--ease);border:3px solid transparent}
+.step.active .step-circle{background:var(--amber);color:var(--slate-900);border-color:var(--amber-light)}
+.step.completed .step-circle{background:var(--success);color:var(--white)}
+.step-label{font-size:.7rem;font-weight:600;color:var(--slate-500);text-align:center;white-space:nowrap}
+.step.active .step-label{color:var(--amber-dark);font-weight:700}
+.step.completed .step-label{color:var(--success)}
+.step-line{flex:1;height:2px;background:var(--slate-100);margin:0 4px;transition:background 300ms var(--ease)}
+.step-line.completed{background:var(--success)}
+.file-upload{position:relative}
+.file-upload input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.file-upload-label{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;border:2px dashed var(--slate-200);border-radius:var(--r-lg);background:var(--slate-50);transition:all 200ms var(--ease);cursor:pointer}
+.file-upload-label:hover{border-color:var(--amber);background:var(--amber-light)}
+.file-upload-label svg{width:48px;height:48px;color:var(--slate-300);margin-bottom:12px}
+.file-upload-label span{font-size:.875rem;color:var(--slate-600);font-weight:500}
+.file-preview{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+.file-preview-item{position:relative;width:80px;height:80px;border-radius:var(--r-md);overflow:hidden;background:var(--slate-100)}
+.file-preview-item img{width:100%;height:100%;object-fit:cover}
+.file-preview-item button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.6);color:var(--white);display:flex;align-items:center;justify-content:center;font-size:1.25rem;line-height:1}
+.tooltip{position:relative}
+.tooltip::before{content:attr(data-tooltip);position:absolute;bottom:125%;left:50%;transform:translateX(-50%);padding:8px 12px;background:var(--slate-900);color:var(--white);font-size:.75rem;border-radius:var(--r-sm);white-space:nowrap;opacity:0;visibility:hidden;transition:all 200ms var(--ease);z-index:10}
+.tooltip::after{content:"";position:absolute;bottom:118%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--slate-900);opacity:0;visibility:hidden;transition:all 200ms var(--ease)}
+.tooltip:hover::before,.tooltip:hover::after{opacity:1;visibility:visible}
+.dropdown{position:relative}
+.dropdown-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:2px solid var(--slate-200);border-radius:var(--r-md);background:var(--white);color:var(--slate-900);font-size:1rem;transition:border-color 200ms var(--ease)}
+.dropdown-trigger:hover{border-color:var(--amber)}
+.dropdown-menu{position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--white);border:1px solid var(--slate-200);border-radius:var(--r-md);box-shadow:var(--shadow-lg);z-index:100;max-height:280px;overflow-y:auto;display:none}
+.dropdown.open .dropdown-menu{display:block}
+.dropdown-item{display:flex;align-items:center;gap:12px;padding:12px 16px;color:var(--slate-700);transition:background 150ms var(--ease)}
+.dropdown-item:hover{background:var(--amber-light);color:var(--amber-dark)}
+.dropdown-item img{width:24px;height:24px;border-radius:4px}
+</style>
 </head>
 <body>
+<header class="header" id="header">
+<div class="container">
+<nav class="nav" role="navigation" aria-label="Main navigation">
+<a href="/" class="logo" aria-label="JengaNasi Home">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9v5H3zM3 16h9v2H3zM16 6h5v2h-5zM16 13h5v5h-5z"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+<span class="logo-text">Jenga<span class="logo-accent">Nasi</span></span>
+</a>
+<div class="nav-links" id="navLinks">
+<a href="#products" class="nav-link">Products</a>
+<a href="#vendors" class="nav-link">Vendors</a>
+<a href="#about" class="nav-link">About</a>
+<a href="#contact" class="nav-link">Contact</a>
+</div>
+<div class="nav-actions">
+<button class="btn btn-ghost btn-sm" id="locationBtn" aria-label="Select location">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+<span class="location-text">Dar es Salaam</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+</button>
+<div class="dropdown" id="cartDropdown">
+<button class="dropdown-trigger btn btn-ghost btn-sm" id="cartBtn" aria-label="Shopping cart" aria-expanded="false" aria-haspopup="true">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+<span class="cart-count" id="cartCount">0</span>
+</button>
+<div class="dropdown-menu" id="cartMenu" role="menu">
+<div class="cart-empty" id="cartEmpty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><p>Your cart is empty</p><button class="btn btn-primary btn-sm" onclick="closeCart();scrollToProducts()">Start Shopping</button></div>
+<div class="cart-items" id="cartItems" style="display:none"></div>
+<div class="cart-footer" id="cartFooter" style="display:none"><div class="cart-total"><span>Total</span><span class="cart-total-amount" id="cartTotalAmount">TSh 0</span></div><button class="btn btn-primary btn-block" onclick="closeCart();openCheckout()">Proceed to Checkout</button></div>
+</div>
+</div>
+<button class="btn btn-ghost btn-sm" id="authBtn" onclick="openAuthModal()">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+</button>
+<button class="btn btn-primary btn-sm" id="vendorBtn" onclick="openVendorRegistration()">Become a Vendor</button>
+</div>
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+</nav>
+<div class="mobile-location-bar" id="mobileLocationBar">
+<div class="location-info">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+<span class="location-name" id="mobileLocationName">Dar es Salaam</span>
+</div>
+<button class="btn btn-outline btn-sm" onclick="openLocationModal()">Change</button>
+</div>
+</div>
+</header>
+
+<main>
+<section class="hero" id="home" aria-labelledby="hero-title">
+<div class="container">
+<div class="hero-content">
+<div class="hero-badge">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+<span>Trusted by 10,000+ builders across Tanzania</span>
+</div>
+<h1 id="hero-title" class="hero-title">Build Better with <span class="hero-accent">JengaNasi</span></h1>
+<p class="hero-subtitle">Tanzania's premier marketplace for construction materials. Compare prices, order from verified vendors, and get materials delivered to your site.</p>
+<div class="hero-search" role="search">
+<div class="search-input-wrapper">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+<input type="search" id="heroSearch" placeholder="Search cement, steel, roofing, tiles..." autocomplete="off" aria-label="Search products">
+</div>
+<button class="btn btn-primary btn-lg" id="heroSearchBtn">Search</button>
+</div>
+<div class="hero-stats">
+<div class="stat"><span class="stat-value" id="statVendors">500+</span><span class="stat-label">Verified Vendors</span></div>
+<div class="stat"><span class="stat-value" id="statProducts">10,000+</span><span class="stat-label">Products Listed</span></div>
+<div class="stat"><span class="stat-value" id="statOrders">50,000+</span><span class="stat-label">Orders Delivered</span></div>
+<div class="stat"><span class="stat-value" id="statRegions">25</span><span class="stat-label">Regions Covered</span></div>
+</div>
+</div>
+<div class="hero-image" aria-hidden="true">
+<div class="hero-image-wrapper">
+<img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80" alt="Construction site with materials" loading="lazy">
+<div class="hero-floating-card">
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 14v4"/><path d="M10 16h4"/></svg>
+<div>
+<strong>Free Delivery</strong><br>
+<small>On orders over TSh 500,000</small>
+</div>
+</div>
+<div class="hero-floating-card card-2">
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+<div>
+<strong>Verified Vendors</strong><br>
+<small>Quality guaranteed</small>
+</div>
+</div>
+<div class="hero-floating-card card-3">
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 14v4"/><path d="M10 16h4"/></svg>
+<div>
+<strong>Easy Returns</strong><br>
+<small>30-day return policy</small>
+</div>
+</div>
+</div>
+</section>
+
+<section class="categories" id="categories" aria-labelledby="categories-title">
+<div class="container">
+<header class="section-header">
+<h2 id="categories-title" class="section-title">Shop by Category</h2>
+<p class="section-subtitle">Find the right materials for your project</p>
+</header>
+<div class="categories-grid" id="categoriesGrid" role="list"></div>
+</div>
+</section>
+
+<section class="featured-products" id="products" aria-labelledby="products-title">
+<div class="container">
+<header class="section-header">
+<div class="section-header-content">
+<h2 id="products-title" class="section-title">Featured Products</h2>
+<p class="section-subtitle">Top-rated materials from verified vendors</p>
+</div>
+<div class="section-actions">
+<select class="dropdown-trigger" id="sortSelect" aria-label="Sort products">
+<option value="featured">Featured</option>
+<option value="price-asc">Price: Low to High</option>
+<option value="price-desc">Price: High to Low</option>
+<option value="rating">Highest Rated</option>
+<option value="newest">Newest</option>
+</select>
+<a href="#products" class="btn btn-ghost">View All Products</a>
+</div>
+</header>
+<div class="products-grid" id="productsGrid" role="list"></div>
+</div>
+</section>
+
+<section class="vendors" id="vendors" aria-labelledby="vendors-title">
+<div class="container">
+<header class="section-header">
+<h2 id="vendors-title" class="section-title">Verified Vendors</h2>
+<p class="section-subtitle">Trusted suppliers across Tanzania</p>
+</header>
+<div class="vendors-carousel" id="vendorsCarousel" role="list"></div>
+<a href="#vendors" class="btn btn-ghost">View All Vendors</a>
+</div>
+</section>
+
+<section class="how-it-works" id="about" aria-labelledby="how-title">
+<div class="container">
+<header class="section-header">
+<h2 id="how-title" class="section-title">How JengaNasi Works</h2>
+<p class="section-subtitle">Simple steps to get your materials</p>
+</header>
+<div class="steps-grid">
+<article class="step-card">
+<div class="step-icon">
+<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+</div>
+<h3>Search & Compare</h3>
+<p>Browse thousands of products from verified vendors. Filter by category, price, location, and rating.</</article>
+<article class="step-card">
+<div class="step-icon">
+<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+</div>
+<h3>Place Your Order</h3>
+<p>Add to cart, choose delivery options, and pay securely via M-Pesa, card, or bank transfer.</</article>
+<article class="step-card">
+<div class="step-icon">
+<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/><path d="M19 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10"/></svg>
+</div>
+<h3>Track Delivery</h3>
+<p>Real-time tracking from vendor to your site. Get notifications at every step.
+</article>
+</div>
+</div>
+</section>
+
+<section class="cta-section" aria-labelledby="cta-title">
+<div class="container">
+<div class="cta-card">
+<div class="cta-content">
+<h2 id="cta-title">Ready to Start Your Project?</h2>
+<p>Join thousands of builders who trust JengaNasi for their construction materials.</p>
+<div class="cta-actions">
+<button class="btn btn-primary btn-lg" onclick="openAuthModal();switchAuthTab('register')">Create Free Account</button>
+<button class="btn btn-outline btn-lg" onclick="openVendorRegistration()">Become a Vendor</button>
+</div>
+</div>
+<div class="cta-image" aria-hidden="true">
+<div class="cta-image-wrapper">
+<img src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&q=80" alt="Construction team planning">
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<footer class="footer" id="contact" role="contentinfo">
+<div class="container">
+<div class="footer-grid">
+<div class="footer-brand">
+<a href="/" class="logo">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h9v5H3zM3 16h9v2H3zM16 6h5v2h-5zM16 13h5v5h-5z"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+<span class="logo-text">Jenga<span class="logo-accent">Nasi</span></span>
+</a>
+<p>Building Tanzania's future, one project at a time.</</div>
+<nav class="footer-links">
+<div class="footer-column">
+<h4>Marketplace</h4>
+<ul><li><a href="#products">Products</a></li><li><a href="#vendors">Vendors</a></li><li><a href="#categories">Categories</a></li><li><a href="#">Deals</a></li></ul>
+</div>
+<div class="footer-column">
+<h4>Support</h4>
+<ul><li><a href="#">Help Center</a></li><li><a href="#">Shipping Info</a></li><li><a href="#">Returns</a></li><li><a href="#">Contact Us</a></li></ul>
+</div>
+<div class="footer-column">
+<h4>For Vendors</h4>
+<ul><li><a href="#" onclick="openVendorRegistration()">Become a Vendor</a></li><li><a href="#">Vendor Dashboard</a></li><li><a href="#">Pricing</a></li><li><a href="#">Partner Program</a></li></ul>
+</div>
+<div class="footer-column">
+<h4>Company</h4>
+<ul><li><a href="#about">About Us</a></li><li><a href="#">Careers</a></li><li><a href="#">Press</a></li><li><a href="#">Blog</a></li></ul>
+</div>
+</nav>
+<div class="footer-contact">
+<h4>Contact Us</h4>
+<address class="contact-info">
+<div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Dar es Salaam, Tanzania</span></div>
+<div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 2v3"/></svg><a href="tel:+255684595822">+255 684 595 822</a></div>
+<div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><a href="mailto:info@jenganasi.co.tz">info@jenganasi.co.tz</a></div>
+</address>
+</div>
+</div>
+<div class="footer-bottom">
+<p>&copy; 2025 JengaNasi Tanzania. All rights reserved.</</div>
+</div>
+</footer>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+<div class="modal-box">
+<header class="modal-header">
+<h2 class="modal-title" id="authTitle">Welcome to JengaNasi</h2>
+<button class="modal-close" onclick="closeModal('authModal')" aria-label="Close">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</button>
+</header>
+<div class="modal-body">
+<div class="steps-indicator" id="authSteps">
+<div class="step active" data-step="1"><div class="step-circle">1</div><span class="step-label">Role</span></div>
+<div class="step-line" data-line="1"></div>
+<div class="step" data-step="2"><div class="step-circle">2</div><span class="step-label">Details</span></div>
+<div class="step-line" data-line="2"></div>
+<div class="step" data-step="3"><div class="step-circle">3</div><span class="step-label">Verify</span></div>
+</div>
+
+<!-- Step 1: Role Selection -->
+<div class="auth-step active" id="authStep1">
+<div class="auth-head">
+<h3>Create your account</h3>
+<p>Select your role to continue</p>
+</div>
+<div class="role-selector">
+<button type="button" class="role-card selected" id="roleCustomer" onclick="selectAuthRole('customer')" data-role="customer">
+<div class="role-icon">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+</div>
+<h4>Customer</h4>
+<p>Browse & order materials</p>
+</button>
+<button type="button" class="role-card" id="roleVendor" onclick="selectAuthRole('vendor')" data-role="vendor">
+<div class="role-icon">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l3.5 3.5V17H14z"/><circle cx="6" cy="19.5" r="1.8" fill="currentColor" stroke="none"/><circle cx="17" cy="19.5" r="1.8" fill="currentColor" stroke="none"/></svg>
+</div>
+<h4>Vendor</h4>
+<p>List & sell your products</p>
+</button>
+</div>
+<div style="margin-top:24px">
+<button type="button" class="btn btn-primary btn-lg btn-block" id="roleNextBtn" onclick="nextAuthStep()" disabled>Continue</button>
+</div>
+</div>
+
+<!-- Step 2: Customer Details -->
+<form class="auth-step" id="customerForm" style="display:none" onsubmit="handleCustomerRegister(event)">
+<div class="auth-head">
+<h3>Customer Registration</h3>
+<p>Fill in your details to continue</p>
+</div>
+<div class="divider"><span>or continue with</span></div>
+<button type="button" class="btn btn-ghost btn-block social-btn" onclick="signInWithGoogle('customer')">
+<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.09 1.06-3.21 1.06-2.84 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.39-4.53 6.16-4.53z"/></svg>
+<span>Continue with Google</span>
+</button>
+<div class="divider"><span>or continue with email</span></div>
+
+<div class="input-group"><label for="custName">Full Name</label><input type="text" id="custName" name="name" placeholder="Juma Mwakalinga" required autocomplete="name"></div>
+<div class="input-group"><label for="custEmail">Email</label><input type="email" id="custEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div>
+<div class="input-group"><label for="custPhone">Phone</label><input type="tel" id="custPhone" name="phone" placeholder="+255 7XX XXX XXX" required autocomplete="tel"></div>
+<div class="input-group"><label for="custPw">Password</label><input type="password" id="custPw" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="8"><div class="pw-strength" id="custPwStrength"><div class="pw-bar"><div class="pw-fill" id="custPwFill"></div></div><span class="pw-text" id="custPwText">At least 8 characters</span></div></div>
+
+<div class="checkbox-group"><input type="checkbox" id="custTerms" name="agreeTerms" required><label for="custTerms">I agree to the <a href="#" onclick="event.preventDefault();openInfoModal('terms')">Terms & Conditions</a> and <a href="#" onclick="event.preventDefault();openInfoModal('privacy')">Privacy Policy</a></label></div>
+
+<div style="margin-top:24px;display:flex;gap:12px;justify-content:center">
+<button type="button" class="btn btn-outline btn-lg" onclick="prevAuthStep()" style="flex:1">Back</button>
+<button type="submit" class="btn btn-primary btn-lg" style="flex:1">Create Account</button>
+</div>
+<div class="auth-switch"><span>Already have an account?</span> <button type="button" onclick="switchAuthTab('signin')">Sign In</button></div>
+</form>
+
+<!-- Step 2: Vendor Category -->
+<div class="auth-step" id="vendorCategoryStep" style="display:none">
+<div class="auth-head">
+<h3>Vendor Registration</h3>
+<p>What best describes your business?</p>
+</div>
+<div class="vtype-grid" id="vendorCategoryGrid"></div>
+<div style="margin-top:24px;display:flex;gap:12px;justify-content:center">
+<button type="button" class="btn btn-outline btn-lg" onclick="prevAuthStep()" style="flex:1">Back</button>
+<button type="button" class="btn btn-primary btn-lg" id="vendorCategoryNextBtn" onclick="nextAuthStep()" disabled style="flex:1">Continue</button>
+</div>
+</div>
+
+<!-- Step 3: Vendor Details -->
+<form class="auth-step" id="vendorForm" style="display:none" onsubmit="handleVendorRegister(event)">
+<div class="auth-head">
+<h3>Vendor Registration</h3>
+<p>Fill in your business details</p>
+</div>
+
+<div class="input-group"><label for="vendFullName">Full Name</label><input type="text" id="vendFullName" name="fullName" placeholder="Juma Mwakalinga" required autocomplete="name"></div>
+<div class="input-group"><label for="vendEmail">Email</label><input type="email" id="vendEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div>
+<div class="input-group"><label for="vendPhone">Phone</label><input type="tel" id="vendPhone" name="phone" placeholder="+255 7XX XXX XXX" required autocomplete="tel"></div>
+<div class="input-group"><label for="vendPw">Password</label><input type="password" id="vendPw" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="8"><div class="pw-strength" id="vendPwStrength"><div class="pw-bar"><div class="pw-fill" id="vendPwFill"></div></div><span class="pw-text" id="vendPwText">At least 8 characters</span></div></div>
+
+<div class="input-group"><label for="vendStoreName">Business / Store Name</label><input type="text" id="vendStoreName" name="storeName" placeholder="e.g. Kilimanjaro Building Supplies" required autocomplete="organization"></div>
+
+<div class="input-group"><label for="vendNationalId">National ID (NIDA)</label><div class="file-upload"><input type="file" id="vendNationalIdFile" name="nationalIdFile" accept="image/*,application/pdf" onchange="handleFilePreview(this,'vendNationalIdPreview')"><label class="file-upload-label" for="vendNationalIdFile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Upload National ID (NIDA)</span></label><div class="file-preview" id="vendNationalIdPreview"></div></div></div>
+
+<div class="input-group"><label for="vendBusinessLicence">Business License</label><div class="file-upload"><input type="file" id="vendBusinessLicenceFile" name="businessLicenceFile" accept="image/*,application/pdf" onchange="handleFilePreview(this,'vendBusinessLicencePreview')"><label class="file-upload-label" for="vendBusinessLicenceFile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg><span>Upload Business License</span></label><div class="file-preview" id="vendBusinessLicencePreview"></div></div></div>
+
+<div class="input-group"><label for="vendBrela">BRELA Registration</label><div class="file-upload"><input type="file" id="vendBrelaFile" name="brelaFile" accept="image/*,application/pdf" onchange="handleFilePreview(this,'vendBrelaPreview')"><label class="file-upload-label" for="vendBrelaFile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Upload BRELA Certificate</span></label><div class="file-preview" id="vendBrelaPreview"></div></div></div>
+
+<div class="input-group"><label for="vendTin">TIN Number</label><div class="file-upload"><input type="file" id="vendTinFile" name="tinFile" accept="image/*,application/pdf" onchange="handleFilePreview(this,'vendTinPreview')"><label class="file-upload-label" for="vendTinFile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="10" y1="8" x2="14" y2="8"/><circle cx="12" cy="12" r="2"/><path d="M10 16l4-4"/></svg><span>Upload TIN Certificate</span></label><div class="file-preview" id="vendTinPreview"></div></div></div>
+
+<div class="input-group"><label for="vendRegion">Store Region</label><select id="vendRegion" name="region" required><option value="">Select region</option></select></div>
+
+<div class="checkbox-group"><input type="checkbox" id="vendTerms" name="agreeTerms" required><label for="vendTerms">I agree to the <a href="#" onclick="event.preventDefault();openInfoModal('terms')">Terms & Conditions</a> and the site fee <a href="#" onclick="event.preventDefault();openInfoModal('fees')">(view fee structure)</a></label></div>
+
+<div style="margin-top:24px;display:flex;gap:12px;justify-content:center">
+<button type="button" class="btn btn-outline btn-lg" onclick="prevAuthStep()" style="flex:1">Back</button>
+<button type="submit" class="btn btn-primary btn-lg" style="flex:1">Create Account</button>
+</div>
+<div class="auth-switch"><span>Already have an account?</span> <button type="button" onclick="switchAuthTab('signin')">Sign In</button></div>
+</form>
+
+<!-- Sign In Form -->
+<form class="auth-step" id="signinForm" style="display:none" onsubmit="handleSignIn(event)">
+<div class="auth-head">
+<h3>Sign In</h3>
+<p>Welcome back! Sign in to continue</p>
+</div>
+
+<div class="input-group"><label for="signinEmail">Email</label><input type="email" id="signinEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div>
+<div class="input-group"><label for="signinPassword">Password</label><input type="password" id="signinPassword" name="password" placeholder="••••••••" required autocomplete="current-password"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><label class="checkbox-group" style="margin:0"><input type="checkbox" id="rememberMe"><label for="rememberMe">Remember me</label></label><a href="#" class="forgot-link" onclick="event.preventDefault();closeModal('authModal');openModal('forgotPasswordModal')">Forgot password?</a></div>
+
+<button type="submit" class="btn btn-primary btn-lg btn-block">Sign In</button>
+<div class="divider"><span>or continue with</span></div>
+<button type="button" class="btn btn-ghost btn-lg btn-block social-btn" onclick="signInWithGoogle('signin')"><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.09 1.06-3.21 1.06-2.84 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.39-4.53 6.16-4.53z"/></svg><span>Continue with Google</span></button>
+
+<div class="auth-switch"><span>Don't have an account?</span> <button type="button" onclick="switchAuthTab('register');resetAuthFlow()">Create an account</button></div>
+</form>
+</div>
+</div>
+</div>
+
+<!-- Location Modal -->
+<div class="modal-overlay" id="locationModal" role="dialog" aria-modal="true" aria-labelledby="locationTitle">
+<div class="modal-box">
+<header class="modal-header"><h2 class="modal-title" id="locationTitle">Your Location</h2><button class="modal-close" onclick="closeModal('locationModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header>
+<div class="modal-body">
+<div class="auth-head"><div class="auth-head-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><h3>Set Your Location</h3><p>Find vendors and products near you</p></div>
+<button type="button" class="btn btn-primary btn-lg btn-block" onclick="useMyLocation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Use My Current Location</button>
+<div class="divider"><span>or choose your region</span></div>
+<select class="dropdown-trigger" id="locationRegionSelect" aria-label="Select region"><option value="">Select your region</option></select>
+<button class="btn btn-primary btn-lg btn-block" onclick="saveLocation()">Save Location</button>
+</div></div></div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-overlay" id="forgotPasswordModal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
+<div class="modal-box"><header class="modal-header"><h2 class="modal-title" id="forgotTitle">Reset Password</h2><button class="modal-close" onclick="closeModal('forgotPasswordModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body"><form onsubmit="handleForgotPassword(event)"><div class="auth-head"><div class="auth-head-icon">🔒</div><h3>Reset Password</h3><p>Enter your email and we'll send you a link to reset your password</p></div><div class="input-group"><label for="forgotEmail">Email</label><input type="email" id="forgotEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div><button type="submit" class="btn btn-primary btn-lg btn-block">Send Reset Link</button></form><div class="auth-switch" style="margin-top:16px"><button type="button" onclick="closeModal('forgotPasswordModal');openModal('authModal');switchAuthTab('signin')">Back to Sign In</button></div></div></div></div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetPasswordModal" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+<div class="modal-box"><header class="modal-header"><h2 class="modal-title" id="resetTitle">Set New Password</h2><button class="modal-close" onclick="closeModal('resetPasswordModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body"><form onsubmit="handleResetPassword(event)"><div class="auth-head"><div class="auth-head-icon">🔒</div><h3>Set New Password</h3><p>Your password reset link is valid. Enter your new password below.</p></div><div class="input-group"><label for="resetPassword">New Password</label><input type="password" id="resetPassword" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="8"><div class="pw-strength" id="resetPwStrength"><div class="pw-bar"><div class="pw-fill" id="resetPwFill"></div></div><span class="pw-text" id="resetPwText">At least 8 characters</span></div></div><div class="input-group"><label for="resetConfirm">Confirm Password</label><input type="password" id="resetConfirm" name="confirm" placeholder="••••••••" required autocomplete="new-password"></div><button type="submit" class="btn btn-primary btn-lg btn-block">Update Password</button></form></div></div></div>
+
+<!-- Info Modal -->
+<div class="modal-overlay" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+<div class="modal-box" style="max-width:640px"><header class="modal-header"><h2 class="modal-title" id="infoTitle"></h2><button class="modal-close" onclick="closeModal('infoModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body" id="infoContent"></div></div></div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+// ============ CONFIGURATION ============
+const SUPABASE_URL = 'https://wpspoxilxzdjbjdzzici.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc3BveGlseHpkamJqZHp6aWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NzkxNTEsImV4cCI6MjEwNTA1NTE1MX0.2GMLPDw_tTEZIob_LjZ040FHcgJMr9r0HmVWwztrBis';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const REGIONS = [
+  'Arusha', 'Dar es Salaam', 'Dodoma', 'Geita', 'Iringa', 'Kagera', 'Katavi',
+  'Kigoma', 'Kilimanjaro', 'Lindi', 'Manyara', 'Mara', 'Mbeya', 'Morogoro',
+  'Mtwara', 'Mwanza', 'Njombe', 'Pemba North', 'Pemba South', 'Pwani',
+  'Rukwa', 'Ruvuma', 'Shinyanga', 'Simiyu', 'Singida', 'Songwe', 'Tabora',
+  'Tanga', 'Zanzibar Central/South', 'Zanzibar North', 'Zanzibar Urban/West'
+];
+
+const CATEGORIES = [
+  {id: 'cement', name: 'Cement & Concrete', icon: '🏗️', count: 156},
+  {id: 'steel', name: 'Steel & Rebar', icon: '⚙️', count: 203},
+  {id: 'roofing', name: 'Roofing Sheets', icon: '🏠', count: 189},
+  {id: 'tiles', name: 'Tiles & Flooring', icon: '🟦', count: 234},
+  {id: 'paint', name: 'Paint & Finishes', icon: '🎨', count: 167},
+  {id: 'plumbing', name: 'Plumbing & Pipes', icon: '🔧', count: 198},
+  {id: 'electrical', name: 'Electrical', icon: '⚡', count: 145},
+  {id: 'tools', name: 'Tools & Equipment', icon: '🛠️', count: 212},
+  {id: 'timber', name: 'Timber & Lumber', icon: '🌲', count: 87},
+  {id: 'aggregates', name: 'Sand & Aggregates', icon: '🏖️', count: 134},
+  {id: 'sanitary', name: 'Sanitary Ware', icon: '🚿', count: 156},
+  {id: 'hardware', name: 'Hardware & Fasteners', icon: '🔩', count: 289}
+];
+
+const VENDOR_TYPES = [
+  {key: 'retail', label: 'Retail Seller', icon: '🏪', desc: 'Sell directly to consumers at your store', features: ['Direct sales', 'Walk-in customers', 'Local delivery']},
+  {key: 'wholesale', label: 'Wholesaler', icon: '🏭', desc: 'Bulk sales to other businesses', features: ['Bulk pricing', 'B2B focus', 'Volume discounts']},
+  {key: 'company', label: 'Company/Enterprise', icon: '🏢', desc: 'Registered company with multiple branches', features: ['Multi-location', 'Corporate clients', 'Contract supply']},
+  {key: 'agent', label: 'Agent/Supplier', icon: '🤝', desc: 'Supply products on behalf of manufacturers', features: ['Commission-based', 'Regional coverage', 'Logistics support']},
+  {key: 'manufacturing', label: 'Manufacturing', icon: '⚙️', desc: 'Produce your own construction materials', features: ['Custom production', 'Quality control', 'Direct pricing']}
+];
+
+// ============ STATE ============
+let currentUser = null;
+let authStep = 1;
+let selectedAuthRole = null;
+let selectedVendorType = null;
+let currentLocation = 'Dar es Salaam';
+let cart = [];
+let products = [];
+let currentSort = 'featured';
+
+// ============ UTILITY FUNCTIONS ============
+function formatPrice(amount) {
+  return new Intl.NumberFormat('sw-TZ', {style: 'currency', currency: 'TZS', minimumFractionDigits: 0}).format(amount);
+}
+
+function showToast(message, type = 'info', duration = 4000) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;color:inherit;font-size:1.25rem;line-height:1">&times;</button>`;
+  container.appendChild(toast);
+  setTimeout(() => {toast.style.animation = 'slideIn 300ms var(--ease) reverse'; setTimeout(() => toast.remove(), 300)}, duration);
+}
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    if (id === 'authModal') resetAuthFlow();
+    if (id === 'locationModal') populateRegionSelects();
+  }
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => {
+      closeModal(m.id);
+    });
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal-overlay')) {
+    closeModal(e.target.id);
+  }
+});
+
+// ============ AUTH FLOW ============
+let authStep = 1;
+let selectedAuthRole = null;
+let selectedVendorType = null;
+
+function resetAuthFlow() {
+  authStep = 1;
+  selectedAuthRole = null;
+  selectedVendorType = null;
+  updateAuthStepsUI();
+  document.querySelectorAll('.auth-step').forEach(s => s.style.display = 'none');
+  document.getElementById('authStep1').style.display = 'block';
+  document.getElementById('signinForm').style.display = 'none';
+  document.getElementById('customerForm').style.display = 'none';
+  document.getElementById('vendorCategoryStep').style.display = 'none';
+  document.getElementById('vendorForm').style.display = 'none';
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('roleCustomer').classList.add('selected');
+  selectedAuthRole = 'customer';
+  document.getElementById('roleNextBtn').disabled = false;
+}
+
+function updateAuthStepsUI() {
+  document.querySelectorAll('.step').forEach((step, i) => {
+    step.classList.toggle('active', i + 1 === authStep);
+    step.classList.toggle('completed', i + 1 < authStep);
+  });
+  document.querySelectorAll('.step-line').forEach((line, i) => {
+    line.classList.toggle('completed', i + 1 < authStep);
+  });
+}
+
+function selectAuthRole(role) {
+  selectedAuthRole = role;
+  document.getElementById('roleCustomer').classList.toggle('selected', role === 'customer');
+  document.getElementById('roleVendor').classList.toggle('selected', role === 'vendor');
+  document.getElementById('roleNextBtn').disabled = false;
+}
+
+function nextAuthStep() {
+  if (authStep === 1) {
+    if (!selectedAuthRole) return;
+    authStep = 2;
+    document.getElementById('authStep1').style.display = 'none';
+    if (selectedAuthRole === 'customer') {
+      document.getElementById('customerForm').style.display = 'block';
+    } else {
+      document.getElementById('vendorCategoryStep').style.display = 'block';
+      renderVendorCategories();
+    }
+  } else if (authStep === 2) {
+    if (selectedAuthRole === 'vendor') {
+      if (!selectedVendorType) return;
+      authStep = 3;
+      document.getElementById('vendorCategoryStep').style.display = 'none';
+      document.getElementById('vendorForm').style.display = 'block';
+    } else {
+      // Customer submits form
+      return;
+    }
+  }
+  updateAuthStepsUI();
+}
+
+function prevAuthStep() {
+  if (authStep === 2) {
+    authStep = 1;
+    document.getElementById('customerForm').style.display = 'none';
+    document.getElementById('vendorCategoryStep').style.display = 'none';
+    document.getElementById('authStep1').style.display = 'block';
+  } else if (authStep === 3) {
+    authStep = 2;
+    document.getElementById('vendorForm').style.display = 'none';
+    document.getElementById('vendorCategoryStep').style.display = 'block';
+  }
+  updateAuthStepsUI();
+}
+
+function renderVendorCategories() {
+  const grid = document.getElementById('vendorCategoryGrid');
+  grid.innerHTML = VENDOR_TYPES.map(vt => `
+    <button type="button" class="vtype-card${selectedVendorType === vt.key ? ' selected' : ''}" onclick="selectVendorType('${vt.key}')" data-type="${vt.key}">
+      <div class="vtype-icon">${vt.icon}</div>
+      <h4>${vt.label}</h4>
+      <p>${vt.desc}</p>
+      <ul class="vtype-features">${vt.features.map(f => `<li>${f}</li>`).join('')}</ul>
+    </button>
+  `).join('');
+}
+
+function selectVendorType(key) {
+  selectedVendorType = key;
+  document.querySelectorAll('.vtype-card').forEach(c => c.classList.toggle('selected', c.dataset.type === key));
+  document.getElementById('vendorCategoryNextBtn').disabled = false;
+}
+
+// ============ AUTH TABS ============
+function switchAuthTab(tab) {
+  document.getElementById('tabSignin').classList.toggle('active', tab === 'signin');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
+  document.getElementById('authStep1').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('customerForm').style.display = 'none';
+  document.getElementById('vendorCategoryStep').style.display = 'none';
+  document.getElementById('vendorForm').style.display = 'none';
+  document.getElementById('customerForm').style.display = 'none';
+  document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
+  
+  if (tab === 'register') resetAuthFlow();
+}
+
+// ============ MODAL HELPERS ============
+function openAuthModal(tab = 'signin') {
+  openModal('authModal');
+  switchAuthTab(tab);
+}
+
+function openVendorRegistration() {
+  openAuthModal('register');
+  selectAuthRole('vendor');
+  nextAuthStep();
+}
+
+function closeCart() {
+  closeModal('cartDropdown');
+}
+
+function toggleCart() {
+  const dropdown = document.getElementById('cartDropdown');
+  dropdown.classList.toggle('open');
+}
+
+// ============ PASSWORD STRENGTH ============
+function updatePasswordStrength(input, fillId, textId) {
+  const val = input.value;
+  const fill = document.getElementById(fillId);
+  const text = document.getElementById(textId);
+  if (!fill || !text) return;
+  
+  let strength = 0;
+  if (val.length >= 8) strength++;
+  if (/[A-Z]/.test(val)) strength++;
+  if (/[a-z]/.test(val)) strength++;
+  if (/[0-9]/.test(val)) strength++;
+  if (/[^A-Za-z0-9]/.test(val)) strength++;
+  
+  const pct = (strength / 5) * 100;
+  fill.style.width = pct + '%';
+  
+  const colors = ['var(--danger)', 'var(--danger)', 'var(--amber)', 'var(--success)', 'var(--success-dark)'];
+  const texts = ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'];
+  fill.style.background = colors[strength] || 'var(--danger)';
+  text.textContent = texts[strength] || 'Very weak';
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'custPw') updatePasswordStrength(e.target, 'custPwFill', 'custPwText');
+  if (e.target.id === 'vendPw') updatePasswordStrength(e.target, 'vendPwFill', 'vendPwText');
+  if (e.target.id === 'resetPassword') updatePasswordStrength(e.target, 'resetPwFill', 'resetPwText');
+});
+
+// ============ FILE PREVIEW ============
+function handleFilePreview(input, previewId) {
+  const preview = document.getElementById(previewId);
+  if (!preview) return;
+  preview.innerHTML = '';
+  Array.from(input.files).forEach(file => {
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      showToast('Only images and PDFs allowed', 'danger');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File must be under 5MB', 'danger');
+      return;
+    }
+    const item = document.createElement('div');
+    item.className = 'file-preview-item';
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      item.innerHTML = `<img src="${url}" alt="${file.name}"><button onclick="this.parentElement.remove();">&times;</button>`;
+    } else {
+      item.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--slate-500)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><small>${file.name}</small><button onclick="this.parentElement.remove();">&times;</button>`;
+    }
+    preview.appendChild(item);
+  });
+}
+
+// ============ REGION SELECTS ============
+function populateRegionSelects() {
+  const selects = document.querySelectorAll('#locationRegionSelect, #vendRegion');
+  selects.forEach(select => {
+    const current = select.value;
+    select.innerHTML = '<option value="">Select region</option>' + REGIONS.map(r => `<option value="${r}"${r === current ? ' selected' : ''}>${r}</option>`).join('');
+  });
+}
+
+// ============ LOCATION ============
+function useMyLocation() {
+  if (!navigator.geolocation) {
+    showToast('Geolocation not supported', 'danger');
+    return;
+  }
+  showToast('Getting your location...', 'info');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const {latitude, longitude} = pos.coords;
+      showToast('Location found! Finding nearest region...', 'success');
+      setTimeout(() => {
+        document.getElementById('locationRegionSelect').value = currentLocation;
+        showToast('Location set to ' + currentLocation, 'success');
+      }, 1000);
+    },
+    err => {
+      showToast('Could not get location. Please select manually.', 'warning');
+    }
+  );
+}
+
+function saveLocation() {
+  const region = document.getElementById('locationRegionSelect').value;
+  if (!region) {
+    showToast('Please select a region', 'warning');
+    return;
+  }
+  currentLocation = region;
+  document.getElementById('location-text').textContent = region;
+  document.getElementById('mobileLocationName').textContent = region;
+  closeModal('locationModal');
+  showToast('Location set to ' + region, 'success');
+  loadProducts();
+}
+
+// ============ CART ============
+function addToCart(product, quantity = 1) {
+  const existing = cart.find(item => item.id === product.id);
+  if (existing) {
+    existing.quantity += quantity;
+  } else {
+    cart.push({...product, quantity});
+  }
+  updateCartUI();
+  showToast(`${product.name} added to cart`, 'success');
+  openCart();
+}
+
+function removeFromCart(productId) {
+  cart = cart.filter(item => item.id !== productId);
+  updateCartUI();
+}
+
+function updateCartQuantity(productId, quantity) {
+  const item = cart.find(item => item.id === productId);
+  if (item) {
+    item.quantity = Math.max(1, quantity);
+    updateCartUI();
+  }
+}
+
+function updateCartUI() {
+  const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  document.getElementById('cartCount').textContent = count;
+  document.getElementById('cartTotalAmount').textContent = formatPrice(total);
+  
+  const empty = document.getElementById('cartEmpty');
+  const items = document.getElementById('cartItems');
+  const footer = document.getElementById('cartFooter');
+  
+  if (cart.length === 0) {
+    empty.style.display = 'block';
+    items.style.display = 'none';
+    footer.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    items.style.display = 'block';
+    footer.style.display = 'block';
+    items.innerHTML = cart.map(item => `
+      <div class="cart-item">
+        <img src="${item.image}" alt="${item.name}">
+        <div class="cart-item-info">
+          <h4>${item.name}</h4>
+          <p class="cart-item-vendor">${item.vendor}</p>
+          <p class="cart-item-price">${formatPrice(item.price)} × ${item.quantity}</p>
+        </div>
+        <div class="cart-item-qty">
+          <button onclick="updateCartQuantity('${item.id}', ${item.quantity - 1})">-</button>
+          <span>${item.quantity}</span>
+          <button onclick="updateCartQuantity('${item.id}', ${item.quantity + 1})">+</button>
+        </div>
+        <button class="cart-item-remove" onclick="removeFromCart('${item.id}')">&times;</button>
+      </div>
+    `).join('');
+  }
+}
+
+function openCart() {
+  document.getElementById('cartDropdown').classList.add('open');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#cartDropdown')) {
+    document.getElementById('cartDropdown').classList.remove('open');
+  }
+});
+
+// ============ CHECKOUT ============
+function openCheckout() {
+  if (cart.length === 0) {
+    showToast('Your cart is empty', 'warning');
+    return;
+  }
+  if (!currentUser) {
+    closeCart();
+    openAuthModal('signin');
+    showToast('Please sign in to checkout', 'info');
+    return;
+  }
+  closeCart();
+  openModal('checkoutModal');
+  renderCheckout();
+}
+
+// ============ PRODUCTS & VENDORS ============
+let allProducts = [];
+let allVendors = [];
+
+async function loadProducts() {
+  try {
+    const {data, error} = await _supabase.from('products').select('*, vendor:vendors(name, region, rating)').eq('status', 'active').order('created_at', {ascending: false}).limit(20);
+    if (error) throw error;
+    allProducts = data || [];
+    renderProducts();
+    renderCategories();
+  } catch (e) {
+    console.error('Load products error:', e);
+    loadMockProducts();
+  }
+}
+
+function loadMockProducts() {
+  allProducts = [
+    {id: '1', name: 'Portland Cement 50kg', category: 'cement', price: 18500, unit: 'bag', stock: 500, vendor: 'Simba Cement', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 234, image: 'https://images.unsplash.com/photo-1581093458791-9d7e8c8c7b3f?w=400&q=80'},
+    {id: '2', name: 'TMT Steel Rebar 12mm', category: 'steel', price: 45000, unit: 'piece', stock: 200, vendor: 'Africa Steel', vendorRegion: 'Dar es Salaam', rating: 4.9, reviews: 189, image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80'},
+    {id: '3', name: 'Ceramic Floor Tiles 60x60', category: 'tiles', price: 28000, unit: 'm²', stock: 1000, vendor: 'Tile Master', vendorRegion: 'Arusha', rating: 4.7, reviews: 156, image: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=400&q=80'},
+    {id: '4', name: 'Corrugated Iron Sheets 3m', category: 'roofing', price: 35000, unit: 'sheet', stock: 300, vendor: 'RoofTech', vendorRegion: 'Mwanza', rating: 4.6, reviews: 98, image: 'https://images.unsplash.com/photo-1581093458791-9d7e8c8c7b3f?w=400&q=80'},
+    {id: '5', name: 'Weather Guard Paint 20L', category: 'paint', price: 85000, unit: 'bucket', stock: 150, vendor: 'ColorWorld', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 201, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80'},
+    {id: '6', name: 'PVC Pipes 4 inch', category: 'plumbing', price: 12000, unit: 'piece', stock: 400, vendor: 'PipeLine', vendorRegion: 'Mbeya', rating: 4.5, reviews: 87, image: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&q=80'}
+  ];
+  renderProducts();
+  renderCategories();
+}
+
+function renderProducts() {
+  const grid = document.getElementById('productsGrid');
+  if (!grid) return;
+  
+  let filtered = [...allProducts];
+  if (currentSort === 'price-asc') filtered.sort((a, b) => a.price - b.price);
+  else if (currentSort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+  else if (currentSort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
+  else if (currentSort === 'newest') filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  
+  grid.innerHTML = filtered.map(p => `
+    <article class="card product-card" role="listitem" onclick="viewProduct('${p.id}')">
+      <div class="product-image"><img src="${p.image}" alt="${p.name}" loading="lazy"></div>
+      <div class="product-body">
+        <div class="product-category"><span class="badge badge-info">${p.category}</span></div>
+        <h3 class="product-name">${p.name}</h3>
+        <div class="product-meta">
+          <span class="product-vendor">🏪 ${p.vendor}</span>
+          <span class="product-location">📍 ${p.vendorRegion}</span>
+        </div>
+        <div class="product-rating">
+          <span class="rating">★ ${p.rating}</span>
+          <span class="reviews">(${p.reviews} reviews)</span>
+        </div>
+        <div class="product-footer">
+          <span class="product-price">${formatPrice(p.price)} <span class="unit">/${p.unit}</span></span>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();addToCart(allProducts.find(p => p.id === '${p.id}'))">Add to Cart</button>
+        </div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderCategories() {
+  const grid = document.getElementById('categoriesGrid');
+  if (!grid) return;
+  grid.innerHTML = CATEGORIES.map(c => `
+    <article class="card category-card" role="listitem" onclick="filterByCategory('${c.id}')">
+      <div class="category-icon">${c.icon}</div>
+      <h3>${c.name}</h3>
+      <span class="badge badge-info">${c.count} products</span>
+    </article>
+  `).join('');
+}
+
+function renderVendors() {
+  const carousel = document.getElementById('vendorsCarousel');
+  if (!carousel) return;
+  
+  const vendors = [
+    {id: '1', name: 'Simba Cement', region: 'Dar es Salaam', rating: 4.9, products: 45, verified: true, avatar: '🏭'},
+    {id: '2', name: 'Africa Steel', region: 'Dar es Salaam', rating: 4.8, products: 32, verified: true, avatar: '⚙️'},
+    {id: '3', name: 'Tile Master', region: 'Arusha', rating: 4.7, products: 28, verified: true, avatar: '🟦'},
+    {id: '4', name: 'RoofTech', region: 'Mwanza', rating: 4.6, products: 19, verified: true, avatar: '🏠'},
+    {id: '5', name: 'ColorWorld', region: 'Dar es Salaam', rating: 4.8, products: 23, verified: true, avatar: '🎨'},
+    {id: '6', name: 'PipeLine', region: 'Mbeya', rating: 4.5, products: 15, verified: true, avatar: '🔧'}
+  ];
+  
+  carousel.innerHTML = vendors.map(v => `
+    <article class="card vendor-card" role="listitem">
+      <div class="vendor-header">
+        <div class="vendor-avatar">${v.avatar}</div>
+        <div>
+          <h4>${v.name}</h4>
+          <div class="vendor-meta">
+            <span class="vendor-location">📍 ${v.region}</span>
+            <span class="badge badge-success">${v.products} products</span>
+          </div>
+        </div>
+      </div>
+      <div class="vendor-stats">
+        <div class="stat"><span class="stat-value">★ ${v.rating}</span><span class="stat-label">Rating</span></div>
+        <div class="stat"><span class="stat-value">${v.products}</span><span class="stat-label">Products</span></div>
+        <div class="stat"><span class="stat-value">${v.verified ? '✓' : '○'}</span><span class="stat-label">Verified</span></div>
+      </div>
+      <button class="btn btn-primary btn-sm btn-block" onclick="viewVendor('${v.id}')">View Products</button>
+    </article>
+  `).join('');
+}
+
+renderVendors();
+
+// ============ PRODUCTS PAGE ============
+function filterByCategory(categoryId) {
+  window.location.href = `#products?category=${categoryId}`;
+}
+
+function viewProduct(productId) {
+  showToast('Product detail view coming soon', 'info');
+}
+
+function viewVendor(vendorId) {
+  showToast('Vendor profile coming soon', 'info');
+}
+
+// ============ SEARCH & SORT ============
+document.getElementById('heroSearchBtn')?.addEventListener('click', () => {
+  const query = document.getElementById('heroSearch').value.trim();
+  if (query) {
+    window.location.href = `#products?search=${encodeURIComponent(query)}`;
+  }
+});
+
+document.getElementById('heroSearch')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') document.getElementById('heroSearchBtn').click();
+});
+
+document.getElementById('sortSelect')?.addEventListener('change', (e) => {
+  currentSort = e.target.value;
+  renderProducts();
+});
+
+// ============ MOBILE MENU ============
+document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+  const navLinks = document.getElementById('navLinks');
+  const btn = document.getElementById('mobileMenuBtn');
+  navLinks.classList.toggle('open');
+  btn.setAttribute('aria-expanded', navLinks.classList.contains('open'));
+});
+
+// ============ HEADER SCROLL ============
+window.addEventListener('scroll', () => {
+  const header = document.getElementById('header');
+  if (window.scrollY > 20) header.classList.add('scrolled');
+  else header.classList.remove('scrolled');
+});
+
+// ============ SMOOTH SCROLL ============
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    const targetId = this.getAttribute('href');
+    if (targetId === '#') return;
+    e.preventDefault();
+    const target = document.querySelector(targetId);
+    if (target) {
+      target.scrollIntoView({behavior: 'smooth', block: 'start'});
+      history.pushState(null, '', targetId);
+    }
+  });
+});
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', () => {
+  loadProducts();
+  populateRegionSelects();
+  
+  // Hero search enter key
+  document.getElementById('heroSearch')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('heroSearchBtn')?.click();
+  });
+  
+  // Location bar click
+  document.getElementById('locationBtn')?.addEventListener('click', () => openModal('locationModal'));
+  document.getElementById('mobileLocationBar')?.addEventListener('click', () => openModal('locationModal'));
+  
+  // Cart dropdown
+  document.getElementById('cartBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCart();
+  });
+  
+  // Auth button
+  document.getElementById('authBtn')?.addEventListener('click', () => openAuthModal());
+  document.getElementById('vendorBtn')?.addEventListener('click', () => openVendorRegistration());
+  
+  // Category cards
+  document.querySelectorAll('.category-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const category = card.querySelector('h3').textContent.toLowerCase().replace(/\s+/g, '-');
+      filterByCategory(category);
+    });
+  });
+});
+</script>
 </body>
 </html>
