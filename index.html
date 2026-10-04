@@ -427,9 +427,10 @@ ul,ol{list-style:none}
 <button type="button" class="btn btn-primary btn-lg btn-block" id="roleNextBtn" onclick="nextAuthStep()" disabled>Continue</button>
 </div>
 </div>
-
+ 
 <!-- Step 2: Customer Details -->
-<form class="auth-step" id="customerForm" style="display:none" onsubmit="handleCustomerRegister(event)">
+<div class="auth-step" id="authStep2" style="display:none">
+<form class="auth-step" id="customerForm" style="display:block" onsubmit="handleCustomerRegister(event)">
 <div class="auth-head">
 <h3>Customer Registration</h3>
 <p>Fill in your details to continue</p>
@@ -454,9 +455,10 @@ ul,ol{list-style:none}
 </div>
 <div class="auth-switch"><span>Already have an account?</span> <button type="button" onclick="switchAuthTab('signin')">Sign In</button></div>
 </form>
+</div>
 
 <!-- Step 2: Vendor Category -->
-<div class="auth-step" id="vendorCategoryStep" style="display:none">
+<div class="auth-step" id="authStep2Vendor" style="display:none">
 <div class="auth-head">
 <h3>Vendor Registration</h3>
 <p>What best describes your business?</p>
@@ -469,7 +471,8 @@ ul,ol{list-style:none}
 </div>
 
 <!-- Step 3: Vendor Details -->
-<form class="auth-step" id="vendorForm" style="display:none" onsubmit="handleVendorRegister(event)">
+<div class="auth-step" id="authStep3" style="display:none">
+<form class="auth-step" id="vendorForm" style="display:block" onsubmit="handleVendorRegister(event)">
 <div class="auth-head">
 <h3>Vendor Registration</h3>
 <p>Fill in your business details</p>
@@ -773,10 +776,10 @@ function resetAuthFlow() {
   updateAuthStepsUI();
   document.querySelectorAll('.auth-step').forEach(s => s.style.display = 'none');
   document.getElementById('authStep1').style.display = 'block';
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep2Vendor').style.display = 'none';
+  document.getElementById('authStep3').style.display = 'none';
   document.getElementById('signinForm').style.display = 'none';
-  document.getElementById('customerForm').style.display = 'none';
-  document.getElementById('vendorCategoryStep').style.display = 'none';
-  document.getElementById('vendorForm').style.display = 'none';
   document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('roleCustomer').classList.add('selected');
   selectedAuthRole = 'customer';
@@ -806,17 +809,17 @@ function nextAuthStep() {
     authStep = 2;
     document.getElementById('authStep1').style.display = 'none';
     if (selectedAuthRole === 'customer') {
-      document.getElementById('customerForm').style.display = 'block';
+      document.getElementById('authStep2').style.display = 'block';
     } else {
-      document.getElementById('vendorCategoryStep').style.display = 'block';
+      document.getElementById('authStep2Vendor').style.display = 'block';
       renderVendorCategories();
     }
   } else if (authStep === 2) {
     if (selectedAuthRole === 'vendor') {
       if (!selectedVendorType) return;
       authStep = 3;
-      document.getElementById('vendorCategoryStep').style.display = 'none';
-      document.getElementById('vendorForm').style.display = 'block';
+      document.getElementById('authStep2Vendor').style.display = 'none';
+      document.getElementById('authStep3').style.display = 'block';
     } else {
       // Customer submits form
       return;
@@ -828,13 +831,13 @@ function nextAuthStep() {
 function prevAuthStep() {
   if (authStep === 2) {
     authStep = 1;
-    document.getElementById('customerForm').style.display = 'none';
-    document.getElementById('vendorCategoryStep').style.display = 'none';
+    document.getElementById('authStep2').style.display = 'none';
+    document.getElementById('authStep2Vendor').style.display = 'none';
     document.getElementById('authStep1').style.display = 'block';
   } else if (authStep === 3) {
     authStep = 2;
-    document.getElementById('vendorForm').style.display = 'none';
-    document.getElementById('vendorCategoryStep').style.display = 'block';
+    document.getElementById('authStep3').style.display = 'none';
+    document.getElementById('authStep2Vendor').style.display = 'block';
   }
   updateAuthStepsUI();
 }
@@ -863,10 +866,9 @@ function switchAuthTab(tab) {
   document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
   document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
   document.getElementById('authStep1').style.display = tab === 'register' ? 'block' : 'none';
-  document.getElementById('customerForm').style.display = 'none';
-  document.getElementById('vendorCategoryStep').style.display = 'none';
-  document.getElementById('vendorForm').style.display = 'none';
-  document.getElementById('customerForm').style.display = 'none';
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep2Vendor').style.display = 'none';
+  document.getElementById('authStep3').style.display = 'none';
   document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
   
   if (tab === 'register') resetAuthFlow();
