@@ -398,7 +398,7 @@ ul,ol{list-style:none}
 </button>
 </header>
 <div class="modal-body">
-<div class="steps-indicator" id="authSteps">
+<div class="steps-indicator" id="authProgress">
 <div class="step active" data-step="1"><div class="step-circle">1</div><span class="step-label">Role</span></div>
 <div class="step-line" data-line="1"></div>
 <div class="step" data-step="2"><div class="step-circle">2</div><span class="step-label">Details</span></div>
@@ -1092,6 +1092,176 @@ function viewProduct(productId) {
 
 function viewVendor(vendorId) {
   showToast('Vendor profile coming soon', 'info');
+}
+
+// ============ AUTH HANDLERS ============
+async function handleSignIn(e) {
+  e.preventDefault();
+  const form = e.target;
+  const email = form.email.value.trim().toLowerCase();
+  const password = form.password.value;
+  if (!email || !password) { showToast('Please fill in all fields', 'danger'); return; }
+  showLoading('Signing in...');
+  try {
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    const session = data.session;
+    const user = data.user;
+    if (session) sessionStorage.setItem('sb_session', JSON.stringify(session));
+    const profile = await getUserProfile(user.id);
+    if (profile) {
+      currentUser = { name: profile.name, email: user.email, role: profile.role, vendorEmail: profile.role === 'vendor' ? user.email : null };
+    } else {
+      currentUser = { name: user.user_metadata?.name || user.email.split('@')[0], email: user.email, role: user.app_metadata?.role || 'customer', vendorEmail: user.app_metadata?.role === 'vendor' ? user.email : null };
+    }
+    closeModal('authModal');
+    saveSession(currentUser);
+    updateAuthUI();
+    form.reset();
+    showToast('Welcome back, ' + currentUser.name.split(' ')[0] + '!');
+    if (currentUser.role === 'vendor') { openVendorDashboard(); }
+    else if (currentUser.role === 'customer') { openCustomerDashboard(); }
+    else { const last = getLastSection(); if (last !== 'home') navigateToSection(last); }
+    renderProducts();
+    renderCategoryChips();
+    initPush();
+  } catch (e) { showToast(e.message || 'An error occurred', 'danger'); } finally { hideLoading(); }
+}
+
+async function handleCustomerRegister(e) {
+  e.preventDefault();
+  const form = e.target;
+  const email = form.email.value.trim().toLowerCase();
+  const password = form.password.value;
+  const name = form.name.value.trim();
+  const phone = form.phone.value.trim();
+  if (!email || !password || !name || !phone) { showToast('Please fill in all fields', 'danger'); return; }
+  if (!form.agreeTerms?.checked) { showToast('You must agree to the Terms & Conditions', 'danger'); return; }
+  showLoading('Creating account...');
+  try {
+    if (demoMode) {
+      if (findDemoUser(email)) { showToast('Email already registered', 'danger'); return; }
+      const hashedPw = await hashPasswordV2(password);
+      const user = { email, password: hashedPw, name, role: 'customer', phone, createdAt: new Date().toISOString() };
+      addDemoUser(user);
+      currentUser = { name, email, role: 'customer' };
+    } else {
+      const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password, options: { data: { name, role: 'customer', phone, nationalId: form.nationalId?.value?.trim(), tin: form.tin?.value?.trim(), paymentAccount: form.paymentAccount?.value?.trim() } } });
+      if (authError) throw new Error(authError.message);
+      if (authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
+      const userId = authData.user.id;
+      const customerData = { id: userId, email, name, role: 'customer', phone, nationalId: form.nationalId?.value?.trim(), tin: form.tin?.value?.trim(), paymentAccount: form.paymentAccount?.value?.trim() };
+      const { error: profileError } = await _supabase.from('customers').insert(customerData);
+      if (profileError) console.warn('Profile creation failed:', profileError.message);
+      currentUser = { name, email, role: 'customer' };
+    }
+    closeModal('authModal');
+    saveSession(currentUser);
+    updateAuthUI();
+    form.reset();
+    regDocData = {};
+    vendorUploadedImage = null;
+    resetVendorTypePicker();
+    resetCustomerTypePicker();
+    document.querySelectorAll('[id^=reg][id$=Preview]').forEach(img => img.style.display = 'none');
+    showToast('Welcome, ' + currentUser.name.split(' ')[0] + '!');
+    openCustomerDashboard();
+    renderProducts();
+    renderCategoryChips();
+    initPush();
+  } catch (e) { showToast(e.message || 'An error occurred', 'danger'); } finally { hideLoading(); }
+}
+
+async function handleVendorRegister(e) {
+  e.preventDefault();
+  const form = e.target;
+  const email = form.email.value.trim().toLowerCase();
+  const password = form.password.value;
+  const name = form.name.value.trim();
+  const phone = form.phone.value.trim();
+  if (!email || !password || !name || !phone) { showToast('Please fill in all fields', 'danger'); return; }
+  const agreeEl = form.agreeTerms;
+  if (!agreeEl || !agreeEl.checked) { showToast('You must agree to the Terms & Conditions', 'danger'); return; }
+  const storeName = form.storeName.value.trim() || name;
+  showLoading('Creating account...');
+  try {
+    if (demoMode) {
+      if (findDemoUser(email)) { showToast('Email already registered', 'danger'); return; }
+      const hashedPw = await hashPasswordV2(password);
+      const user = { email, password: await hashPasswordV2(password), name, role: 'vendor', storeName, phone, createdAt: new Date().toISOString() };
+      addDemoUser(user);
+      currentUser = { name: storeName, email, role: 'vendor', vendorEmail: email };
+    } else {
+      const { data: authData, error: authError } = await _supabase.auth.signUp({ email, password, options: { data: { name, role: 'vendor', storeName, phone, brela: form.brela?.value?.trim() || null, licence: form.licence?.value?.trim() || null, nationalId: form.vendorNationalId?.value?.trim() || null, tin: form.vendorTin?.value?.trim() || null, bankAccount: form.vendorBank?.value?.trim() || null, photo: vendorUploadedImage || null, region: form.vendorRegion?.value?.trim() || null, lat: form.vendorLat?.value ? parseFloat(form.vendorLat.value) || null : null, lng: form.vendorLng?.value ? parseFloat(form.vendorLng.value) || null : null } } });
+      if (authError) throw new Error(authError.message);
+      if (authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
+      const userId = authData.user.id;
+      const vendorData = { id: userId, email, name, role: 'vendor', storeName, phone, brela: form.brela?.value?.trim() || null, licence: form.licence?.value?.trim() || null, nationalId: form.vendorNationalId?.value?.trim() || null, tin: form.vendorTin?.value?.trim() || null, bankAccount: form.vendorBank?.value?.trim() || null, photo: vendorUploadedImage || null, region: form.vendorRegion?.value?.trim() || null, lat: form.vendorLat?.value ? parseFloat(form.vendorLat.value) || null : null, lng: form.vendorLng?.value ? parseFloat(form.vendorLng.value) || null : null };
+      const { error: profileError } = await _supabase.from('vendors').insert(vendorData);
+      if (profileError) { await _supabase.auth.admin.deleteUser(authData.user.id); throw new Error(profileError.message); }
+      currentUser = { name: storeName, email, role: 'vendor', vendorEmail: email };
+    }
+    closeModal('authModal');
+    saveSession(currentUser);
+    updateAuthUI();
+    form.reset();
+    regDocData = {};
+    vendorUploadedImage = null;
+    resetVendorTypePicker();
+    resetCustomerTypePicker();
+    document.querySelectorAll('[id^=reg][id$=Preview]').forEach(img => img.style.display = 'none');
+    showToast('Welcome, ' + currentUser.name.split(' ')[0] + '!');
+    openVendorDashboard();
+    renderProducts();
+    renderCategoryChips();
+    initPush();
+  } catch (e) { showToast(e.message || 'An error occurred', 'danger'); } finally { hideLoading(); }
+}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const form = e.target;
+  const email = form.email.value.trim().toLowerCase();
+  if (!email) { showToast('Please enter your email', 'danger'); return; }
+  showLoading('Sending reset link...');
+  try {
+    const { error } = await _supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname + '#reset-password' });
+    if (error) throw error;
+    showToast('If this email exists, a password reset link has been sent.', 'success');
+    closeModal('forgotPasswordModal');
+  } catch (err) {
+    showToast('Failed to send reset link: ' + err.message, 'danger');
+  } finally { hideLoading(); }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const form = e.target;
+  const password = form.password.value;
+  const confirm = form.confirm.value;
+  if (!password || !confirm) { showToast('Please fill in all fields', 'danger'); return; }
+  if (password !== confirm) { showToast('Passwords do not match', 'danger'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters', 'danger'); return; }
+  showLoading('Updating password...');
+  try {
+    const { error } = await _supabase.auth.updateUser({ password: password });
+    if (error) throw error;
+    const email = form.dataset.email;
+    if (email) {
+      const hashed = await hashPasswordV2(password);
+      if (customerAccounts.some(c => c.email === email)) {
+        await sbUpdate('customers', { email }, { password: hashed });
+      } else if (vendorAccounts.some(v => v.email === email)) {
+        await sbUpdate('vendors', { email }, { password: hashed });
+      }
+    }
+    showToast('Password updated successfully! Please sign in with your new password.', 'success');
+    closeModal('resetPasswordModal');
+    openModal('authModal');
+    switchAuthTab('signin');
+  } catch (err) {
+    showToast('Failed to update password: ' + err.message, 'danger');
+  } finally { hideLoading(); }
 }
 
 // ============ SEARCH & SORT ============
