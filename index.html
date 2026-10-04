@@ -595,10 +595,129 @@ let currentLocation = 'Dar es Salaam';
 let cart = [];
 let products = [];
 let currentSort = 'featured';
+let demoMode = false;
+let supabaseAvailable = true;
 
+// ============ UTILITY FUNCTIONS ============
 // ============ UTILITY FUNCTIONS ============
 function formatPrice(amount) {
   return new Intl.NumberFormat('sw-TZ', {style: 'currency', currency: 'TZS', minimumFractionDigits: 0}).format(amount);
+}
+
+function formatTZS(amount) {
+  return formatPrice(amount);
+}
+
+function esc(str) {
+  return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#039;');
+}
+
+function escUrl(str) {
+  return encodeURIComponent(str);
+}
+
+function sha256Hex(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  return crypto.subtle.digest('SHA-256', data).then(buffer => {
+    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  });
+}
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPasswordV2(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array([...salt, ...data]));
+  const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return 'v2$' + Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('') + '$' + hash;
+}
+
+async function checkPwMatch(stored, raw) {
+  if (stored.startsWith('v2$')) {
+    const parts = stored.split('$');
+    if (parts.length !== 3) return false;
+    const salt = new Uint8Array(parts[1].match(/.{2}/g).map(b => parseInt(b, 16)));
+    const encoder = new TextEncoder();
+    const data = encoder.encode(raw);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array([...salt, ...data]));
+    const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return hash === parts[2];
+  }
+  const legacy = await hashPassword(raw);
+  return stored === legacy || stored === raw;
+}
+
+const DEMO_USERS_KEY = 'jenganasi_demo_users';
+function getDemoUsers() {
+  try { return JSON.parse(localStorage.getItem(DEMO_USERS_KEY) || '[]'); } catch { return []; }
+}
+
+function findDemoUser(email) {
+  return getDemoUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+}
+
+function addDemoUser(user) {
+  const users = getDemoUsers();
+  users.push(user);
+  localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(users));
+  return user;
+}
+
+function sbUpdate(table, filter, data) {
+  return _supabase.from(table).update(data).match(filter);
+}
+
+function sbInsert(table, data) {
+  return _supabase.from(table).insert(data);
+}
+
+function ccKeys(obj) {
+  const result = {};
+  for (const key in obj) {
+    result[key.toLowerCase().replace(/_/g, '')] = obj[key];
+  }
+  return result;
+}
+
+function esc(str) {
+  return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#039;');
+}
+
+function escUrl(str) {
+  return encodeURIComponent(str);
+}
+
+async function signInWithOAuth(provider) {
+  if (!['google'].includes(provider)) { showToast('Invalid provider', 'danger'); return; }
+  if (demoMode) { showToast('OAuth not available in demo mode. Use email/password.', 'danger'); return; }
+  showLoading('Redirecting to ' + provider + '...');
+  try {
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await _supabase.auth.signInWithOAuth({ provider, options: { redirectTo, skipBrowserRedirect: false } });
+    if (error) throw error;
+  } catch (err) {
+    showToast('Failed to start ' + provider + ' sign-in: ' + err.message, 'danger');
+    hideLoading();
+  }
+}
+
+function openInfoPage(page) {
+  const content = {
+    terms: '<h3>Terms & Conditions</h3><p>By using JengaNasi, you agree to our terms...</p>',
+    privacy: '<h3>Privacy Policy</h3><p>We respect your privacy...</p>',
+    fees: '<h3>Site Fee Structure</h3><p>JengaNasi charges a 10% commission on all vendor sales...</p>'
+  };
+  document.getElementById('infoTitle').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+  document.getElementById('infoContent').innerHTML = content[page] || '<p>Content not available</p>';
+  openModal('infoModal');
 }
 
 function showToast(message, type = 'info', duration = 4000) {
