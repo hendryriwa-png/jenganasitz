@@ -645,7 +645,11 @@ async function placeOrder() {
 async function loadProducts() {
   try {
     const {data, error} = await _supabase.from('products').select('*').eq('status', 'active').order('created_at', {ascending: false}).limit(20);
-    if (error) throw error;
+    if (error) {
+      console.warn('Products query failed:', error.message);
+      loadMockProducts();
+      return;
+    }
     allProducts = data || [];
     renderProducts();
     renderCategories();
@@ -775,7 +779,15 @@ async function handleSignIn(e) {
   showLoading('Signing in...');
   try {
     const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      // Check if it's a "user not found" or "invalid credentials" - expected for new users
+      if (error.message.includes('Invalid login credentials') || error.message.includes('User not found')) {
+        showToast('Invalid email or password. Or create an account first.', 'danger');
+      } else {
+        throw error;
+      }
+      return;
+    }
     const session = data.session;
     const user = data.user;
     if (session) sessionStorage.setItem('sb_session', JSON.stringify(session));
