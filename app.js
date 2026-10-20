@@ -374,16 +374,26 @@ function selectVendorType(key) {
 
 // ============ AUTH TABS ============
 function switchAuthTab(tab) {
-  document.getElementById('tabSignin').classList.toggle('active', tab === 'signin');
-  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
-  document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
-  document.getElementById('authStep1').style.display = tab === 'register' ? 'block' : 'none';
-  document.getElementById('authStep2').style.display = 'none';
-  document.getElementById('authStep2Vendor').style.display = 'none';
-  document.getElementById('authStep3').style.display = 'none';
-  document.getElementById('signinForm').style.display = tab === 'signin' ? 'block' : 'none';
+  const signinForm = document.getElementById('signinForm');
+  const authStep1 = document.getElementById('authStep1');
+  const authStep2 = document.getElementById('authStep2');
+  const authStep2Vendor = document.getElementById('authStep2Vendor');
+  const authStep3 = document.getElementById('authStep3');
 
-  if (tab === 'register') resetAuthFlow();
+  if (tab === 'signin') {
+    if (signinForm) signinForm.style.display = 'block';
+    if (authStep1) authStep1.style.display = 'none';
+    if (authStep2) authStep2.style.display = 'none';
+    if (authStep2Vendor) authStep2Vendor.style.display = 'none';
+    if (authStep3) authStep3.style.display = 'none';
+  } else {
+    if (signinForm) signinForm.style.display = 'none';
+    if (authStep1) authStep1.style.display = 'block';
+    if (authStep2) authStep2.style.display = 'none';
+    if (authStep2Vendor) authStep2Vendor.style.display = 'none';
+    if (authStep3) authStep3.style.display = 'none';
+    resetAuthFlow();
+  }
 }
 
 // ============ MODAL HELPERS ============
@@ -634,7 +644,7 @@ async function placeOrder() {
 // ============ PRODUCTS & VENDORS ============
 async function loadProducts() {
   try {
-    const {data, error} = await _supabase.from('products').select('*, vendor:vendors(name, region, rating)').eq('status', 'active').order('created_at', {ascending: false}).limit(20);
+    const {data, error} = await _supabase.from('products').select('*').eq('status', 'active').order('created_at', {ascending: false}).limit(20);
     if (error) throw error;
     allProducts = data || [];
     renderProducts();
