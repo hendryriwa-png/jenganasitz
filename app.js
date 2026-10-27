@@ -355,8 +355,17 @@ async function restoreSession() {
     const { data, error } = await _supabase.auth.getSession();
     if (error) throw error;
     if (!data?.session) { clearSession(); return; }
-    const profile = await resolveUserProfile(data.session.user, { createIfMissing: true });
-    if (profile) { saveSession(profile); updateAuthUI(); }
+    // Do not create profile rows while restoring an old session: the account
+    // may have been deleted, and a cached JWT would otherwise resurrect an
+    // orphaned profile. Missing profiles are created on the next sign-in.
+    const profile = await resolveUserProfile(data.session.user, { createIfMissing: false });
+    if (profile) {
+      saveSession(profile);
+      updateAuthUI();
+    } else {
+      await _supabase.auth.signOut();
+      clearSession();
+    }
   } catch (e) {
     console.warn('Session restore failed:', e.message);
   }
