@@ -1925,9 +1925,10 @@ section[id], footer[id] {
 
 @media (max-width: 720px) {
   .product-detail { grid-template-columns: 1fr; gap: var(--space-lg); }
+  .product-detail-image { aspect-ratio: 4 / 3; }
   .product-detail-buy { flex-wrap: wrap; }
   .dashboard-form { grid-template-columns: 1fr; }
-  .checkout-success-summary { gap: var(--space-md); }
+  .checkout-success-summary { gap: var(--space-sm); }
 }
 
 /* ========================================
