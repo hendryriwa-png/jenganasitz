@@ -6,7 +6,6 @@ on:
     paths:
       - 'supabase/functions/**'
       - 'supabase/config.toml'
-      - 'supabase/migrations/**'
   workflow_dispatch:
 
 permissions:
@@ -28,15 +27,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase functions deploy vendor-dashboard
-          supabase functions deploy place-order
-          supabase functions deploy sign-up
-          supabase functions deploy sign-in
-          supabase functions deploy notify-login
-
-      - name: Push Database Migrations
-        if: hashFiles('supabase/migrations/**/*.sql') != ''
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: supabase db push
+          supabase functions deploy vendor-dashboard --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy place-order --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy sign-in --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy notify-login --project-ref "$SUPABASE_PROJECT_REF"
