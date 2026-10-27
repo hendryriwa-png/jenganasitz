@@ -8,13 +8,17 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="JengaNasi Tanzania — Construction Materials Marketplace">
   <meta property="og:description" content="Tanzania's premium marketplace for construction materials. Compare, order, and get building supplies delivered from verified vendors nationwide.">
-  <meta property="og:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'%3E%3Crect fill='%23f59e0b' width='1200' height='630'/%3E%3Ctext x='600' y='315' font-family='Arial' font-size='48' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJengaNasi%3C/text%3E%3C/svg%3E">
+  <meta property="og:site_name" content="JengaNasi Tanzania">
+  <meta property="og:image" content="https://jenganasitz.vercel.app/assets/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content="JengaNasi — Tanzania's construction materials marketplace">
   <meta property="og:url" content="https://jenganasitz.vercel.app/">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'%3E%3Crect fill='%23f59e0b' width='1200' height='630'/%3E%3Ctext x='600' y='315' font-family='Arial' font-size='48' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJengaNasi%3C/text%3E%3C/svg%3E">
+  <meta name="twitter:title" content="JengaNasi Tanzania — Construction Materials Marketplace">
+  <meta name="twitter:description" content="Compare, order, and get building supplies delivered from verified vendors nationwide.">
+  <meta name="twitter:image" content="https://jenganasitz.vercel.app/assets/og-image.png">
   <meta name="theme-color" content="#f59e0b">
   <link rel="canonical" href="https://jenganasitz.vercel.app/">
   <script type="application/ld+json">
@@ -25,8 +29,8 @@
     "alternateName": "JengaNasi",
     "description": "Tanzania's premium marketplace for construction materials. Compare, order, and get building supplies delivered from verified vendors nationwide.",
     "url": "https://jenganasitz.vercel.app/",
-    "image": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'%3E%3Crect fill='%23f59e0b' width='1200' height='630'/%3E%3Ctext x='600' y='315' font-family='Arial' font-size='48' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJengaNasi%3C/text%3E%3C/svg%3E",
-    "logo": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'%3E%3Crect fill='%23f59e0b' width='1200' height='630'/%3E%3Ctext x='600' y='315' font-family='Arial' font-size='48' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJengaNasi%3C/text%3E%3C/svg%3E",
+    "image": "https://jenganasitz.vercel.app/assets/og-image.png",
+    "logo": "https://jenganasitz.vercel.app/assets/og-image.png",
     "telephone": "+255684595822",
     "email": "info@jenganasi.co.tz",
     "priceRange": "TZS",
@@ -59,6 +63,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <header class="header" id="header">
     <div class="container">
       <nav class="nav" role="navigation" aria-label="Main navigation">
@@ -67,10 +72,15 @@
           <span class="logo-text">Jenga<span class="logo-accent">Nasi</span></span>
         </a>
         <div class="nav-links" id="navLinks">
-          <a href="#products" class="nav-link">Products</a>
+          <a href="#products" class="nav-link" onclick="clearProductFilters(event)">Products</a>
           <a href="#vendors" class="nav-link">Vendors</a>
           <a href="#about" class="nav-link">About</a>
           <a href="#contact" class="nav-link">Contact</a>
+          <div class="nav-links-mobile">
+            <button class="btn btn-outline btn-block" id="mobileAuthBtn" type="button" onclick="openAuthModal()">Sign In</button>
+            <button class="btn btn-primary btn-block" id="mobileVendorBtn" type="button" onclick="openVendorRegistration()">Become a Vendor</button>
+            <button class="btn btn-ghost btn-block" id="mobileSignOutBtn" type="button" style="display:none" onclick="signOutUser()">Sign Out</button>
+          </div>
         </div>
         <div class="nav-actions">
           <button class="btn btn-ghost btn-sm" id="locationBtn" aria-label="Select location">
@@ -79,7 +89,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
           </button>
           <div class="dropdown" id="cartDropdown">
-            <button class="dropdown-trigger btn btn-ghost btn-sm" id="cartBtn" aria-label="Shopping cart" aria-expanded="false" aria-haspopup="true">
+            <button class="dropdown-trigger btn btn-ghost btn-sm" id="cartBtn" aria-label="Shopping cart, 0 items" aria-expanded="false" aria-haspopup="true">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
               <span class="cart-count" id="cartCount">0</span>
             </button>
@@ -89,10 +99,20 @@
               <div class="cart-footer" id="cartFooter" style="display:none"><div class="cart-total"><span>Total</span><span class="cart-total-amount" id="cartTotalAmount">TSh 0</span></div><button class="btn btn-primary btn-block" onclick="closeCart();openCheckout()">Proceed to Checkout</button></div>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" id="authBtn" onclick="openAuthModal()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <button class="btn btn-ghost btn-sm" id="authBtn" aria-label="Sign in or create account" aria-haspopup="dialog" onclick="openAuthModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </button>
           <button class="btn btn-primary btn-sm" id="vendorBtn" onclick="openVendorRegistration()">Become a Vendor</button>
+          <div class="dropdown user-menu" id="userMenu" style="display:none">
+            <button class="dropdown-trigger btn btn-ghost btn-sm" id="userMenuBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span id="userName">Account</span>
+            </button>
+            <div class="dropdown-menu user-dropdown-menu" role="menu">
+              <button type="button" class="dropdown-item" role="menuitem" onclick="openAccountDashboard()">My Dashboard</button>
+              <button type="button" class="dropdown-item" role="menuitem" onclick="signOutUser()">Sign Out</button>
+            </div>
+          </div>
         </div>
         <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -108,8 +128,12 @@
     </div>
   </header>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <section class="hero" id="home" aria-labelledby="hero-title">
+      <div class="hero-bg" aria-hidden="true">
+        <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1600&q=80" alt="" loading="eager" fetchpriority="high" width="1600" height="900">
+        <div class="hero-overlay"></div>
+      </div>
       <div class="container">
         <div class="hero-content">
           <div class="hero-badge">
@@ -131,30 +155,14 @@
             <div class="stat"><span class="stat-value" id="statOrders">50,000+</span><span class="stat-label">Orders Delivered</span></div>
             <div class="stat"><span class="stat-value" id="statRegions">25</span><span class="stat-label">Regions Covered</span></div>
           </div>
-        </div>
-        <div class="hero-image" aria-hidden="true">
-          <div class="hero-image-wrapper">
-            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80" alt="Construction site with materials" loading="lazy" width="800" height="600">
-            <div class="hero-floating-card">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 14v4"/><path d="M10 16h4"/></svg>
-              <div>
-                <strong>Free Delivery</strong><br>
-                <small>On orders over TSh 500,000</small>
-              </div>
-            </div>
-            <div class="hero-floating-card card-2">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
-              <div>
-                <strong>Verified Vendors</strong><br>
-                <small>Quality guaranteed</small>
-              </div>
-            </div>
-            <div class="hero-floating-card card-3">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 14v4"/><path d="M10 16h4"/></svg>
-              <div>
-                <strong>Easy Returns</strong><br>
-                <small>30-day return policy</small>
-              </div>
+          <div class="hero-trust" aria-label="Trusted by leading companies">
+            <span class="hero-trust-label">Trusted by</span>
+            <div class="hero-trust-logos" aria-hidden="true">
+              <span class="trust-logo">Simba Cement</span>
+              <span class="trust-logo">Africa Steel</span>
+              <span class="trust-logo">Tile Master</span>
+              <span class="trust-logo">RoofTech</span>
+              <span class="trust-logo">ColorWorld</span>
             </div>
           </div>
         </div>
@@ -167,7 +175,7 @@
           <h2 id="categories-title" class="section-title">Shop by Category</h2>
           <p class="section-subtitle">Find the right materials for your project</p>
         </header>
-        <div class="categories-grid" id="categoriesGrid" role="list"></div>
+        <div class="categories-grid" id="categoriesGrid"></div>
       </div>
     </section>
 
@@ -176,7 +184,7 @@
         <header class="section-header">
           <div class="section-header-content">
             <h2 id="products-title" class="section-title">Featured Products</h2>
-            <p class="section-subtitle">Top-rated materials from verified vendors</p>
+            <p class="section-subtitle" id="productsSubtitle" aria-live="polite">Top-rated materials from verified vendors</p>
           </div>
           <div class="section-actions">
             <select class="dropdown-trigger" id="sortSelect" aria-label="Sort products">
@@ -186,7 +194,7 @@
               <option value="rating">Highest Rated</option>
               <option value="newest">Newest</option>
             </select>
-            <a href="#products" class="btn btn-ghost">View All Products</a>
+            <a href="#products" class="btn btn-ghost" onclick="clearProductFilters(event)">View All Products</a>
           </div>
         </header>
         <div class="products-grid" id="productsGrid" role="list"></div>
@@ -255,50 +263,62 @@
         </div>
       </div>
     </section>
+  </main>
 
-    <footer class="footer" id="contact" role="contentinfo">
-      <div class="container">
-        <div class="footer-grid">
-          <div class="footer-brand">
-            <a href="/" class="logo">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h9v5H3zM3 16h9v2H3zM16 6h5v2h-5zM16 13h5v5h-5z"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/></svg>
-              <span class="logo-text">Jenga<span class="logo-accent">Nasi</span></span>
-            </a>
-            <p>Building Tanzania's future, one project at a time.</p>
-          </div>
-          <nav class="footer-links">
-            <div class="footer-column">
-              <h4>Marketplace</h4>
-              <ul><li><a href="#products">Products</a></li><li><a href="#vendors">Vendors</a></li><li><a href="#categories">Categories</a></li><li><a href="#">Deals</a></li></ul>
-            </div>
-            <div class="footer-column">
-              <h4>Support</h4>
-              <ul><li><a href="#">Help Center</a></li><li><a href="#">Shipping Info</a></li><li><a href="#">Returns</a></li><li><a href="#">Contact Us</a></li></ul>
-            </div>
-            <div class="footer-column">
-              <h4>For Vendors</h4>
-              <ul><li><a href="#" onclick="openVendorRegistration()">Become a Vendor</a></li><li><a href="#">Vendor Dashboard</a></li><li><a href="#">Pricing</a></li><li><a href="#">Partner Program</a></li></ul>
-            </div>
-            <div class="footer-column">
-              <h4>Company</h4>
-              <ul><li><a href="#about">About Us</a></li><li><a href="#">Careers</a></li><li><a href="#">Press</a></li><li><a href="#">Blog</a></li></ul>
-            </div>
-          </nav>
-          <div class="footer-contact">
-            <h4>Contact Us</h4>
-            <address class="contact-info">
-              <div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Dar es Salaam, Tanzania</span></div>
-              <div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 2v3"/></svg><a href="tel:+255684595822">+255 684 595 822</a></div>
-              <div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><a href="mailto:info@jenganasi.co.tz">info@jenganasi.co.tz</a></div>
-            </address>
-          </div>
+  <footer class="footer" id="contact">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h9v5H3zM3 16h9v2H3zM16 6h5v2h-5zM16 13h5v5h-5z"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+            <span class="logo-text">Jenga<span class="logo-accent">Nasi</span></span>
+          </a>
+          <p>Building Tanzania's future, one project at a time.</p>
         </div>
-        <div class="footer-bottom">
-          <p>&copy; 2025 JengaNasi Tanzania. All rights reserved.</p>
+        <nav class="footer-links" aria-label="Footer">
+          <div class="footer-column">
+            <h3>Marketplace</h3>
+            <ul>
+              <li><a href="#products" onclick="clearProductFilters(event)">Products</a></li>
+              <li><a href="#vendors">Vendors</a></li>
+              <li><a href="#categories">Categories</a></li>
+              <li><a href="#" onclick="event.preventDefault();openVendorRegistration()">Become a Vendor</a></li>
+            </ul>
+          </div>
+          <div class="footer-column">
+            <h3>Support</h3>
+            <ul>
+              <li><a href="#contact">Contact Us</a></li>
+              <li><a href="legal.html#delivery">Delivery Information</a></li>
+              <li><a href="legal.html#returns">Returns &amp; Refunds</a></li>
+              <li><a href="legal.html">Terms &amp; Privacy</a></li>
+            </ul>
+          </div>
+          <div class="footer-column">
+            <h3>Company</h3>
+            <ul>
+              <li><a href="#about">About Us</a></li>
+              <li><a href="#" onclick="event.preventDefault();openInfoModal('fees')">Site Fees</a></li>
+              <li><a href="#" onclick="event.preventDefault();openVendorDashboard()">Vendor Dashboard</a></li>
+              <li><a href="mailto:info@jenganasi.co.tz">Email Us</a></li>
+            </ul>
+          </div>
+        </nav>
+        <div class="footer-contact">
+          <h3>Contact Us</h3>
+          <address class="contact-info">
+            <div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Dar es Salaam, Tanzania</span></div>
+            <div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 2v3"/></svg><a href="tel:+255684595822">+255 684 595 822</a></div>
+            <div class="contact-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><a href="mailto:info@jenganasi.co.tz">info@jenganasi.co.tz</a></div>
+          </address>
         </div>
       </div>
-    </footer>
-  </main>
+      <div class="footer-bottom">
+        <p>&copy; 2026 JengaNasi Tanzania. All rights reserved.</p>
+        <p class="footer-legal"><a href="legal.html#privacy">Privacy</a> <span aria-hidden="true">·</span> <a href="legal.html#terms">Terms</a> <span aria-hidden="true">·</span> <a href="legal.html#delivery">Delivery</a></p>
+      </div>
+    </div>
+  </footer>
 
   <!-- Auth Modal -->
   <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -431,7 +451,7 @@
 
           <div class="input-group"><label for="signinEmail">Email</label><input type="email" id="signinEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div>
           <div class="input-group"><label for="signinPassword">Password</label><input type="password" id="signinPassword" name="password" placeholder="••••••••" required autocomplete="current-password"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><label class="checkbox-group" style="margin:0"><input type="checkbox" id="rememberMe" autocomplete="off"><label for="rememberMe">Remember me</label></label><a href="#" class="forgot-link" onclick="event.preventDefault();closeModal('authModal');openModal('forgotPasswordModal')">Forgot password?</a></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="checkbox-group" style="margin:0"><input type="checkbox" id="rememberMe" autocomplete="off"><label for="rememberMe">Remember me</label></div><a href="#" class="forgot-link" onclick="event.preventDefault();closeModal('authModal');openModal('forgotPasswordModal')">Forgot password?</a></div>
 
           <button type="submit" class="btn btn-primary btn-lg btn-block">Sign In</button>
           <div class="divider"><span>or continue with</span></div>

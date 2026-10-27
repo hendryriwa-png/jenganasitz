@@ -44,6 +44,7 @@ let cart = [];
 let allProducts = [];
 let allVendors = [];
 let currentSort = 'featured';
+let activeFilters = {search: '', category: ''};
 let demoMode = false;
 let supabaseAvailable = true;
 let regDocData = {};
@@ -58,8 +59,20 @@ function formatTZS(amount) {
   return formatPrice(amount);
 }
 
+const ESC_MAP = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'};
+
 function esc(str) {
-  return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#039;');
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ESC_MAP[c]);
+}
+
+function safeUrl(str) {
+  if (!str) return '';
+  try {
+    const url = new URL(str, location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (e) {
+    return '';
+  }
 }
 
 function escUrl(str) {
@@ -252,17 +265,51 @@ function updateAuthUI() {
   const vendorBtn = document.getElementById('vendorBtn');
   const userMenu = document.getElementById('userMenu');
   const userNameEl = document.getElementById('userName');
+  const mobileAuthBtn = document.getElementById('mobileAuthBtn');
+  const mobileVendorBtn = document.getElementById('mobileVendorBtn');
+  const mobileSignOutBtn = document.getElementById('mobileSignOutBtn');
 
   if (currentUser) {
     if (authBtn) authBtn.style.display = 'none';
     if (vendorBtn) vendorBtn.style.display = 'none';
     if (userMenu) userMenu.style.display = 'flex';
-    if (userNameEl) userNameEl.textContent = currentUser.name.split(' ')[0];
+    if (userNameEl) userNameEl.textContent = (currentUser.name || 'Account').split(' ')[0];
+    if (mobileAuthBtn) {
+      mobileAuthBtn.textContent = 'My Account';
+      mobileAuthBtn.onclick = openAccountDashboard;
+      mobileAuthBtn.style.display = 'flex';
+    }
+    if (mobileVendorBtn) mobileVendorBtn.style.display = 'none';
+    if (mobileSignOutBtn) mobileSignOutBtn.style.display = 'flex';
   } else {
     if (authBtn) authBtn.style.display = 'flex';
     if (vendorBtn) vendorBtn.style.display = 'flex';
     if (userMenu) userMenu.style.display = 'none';
+    if (mobileAuthBtn) {
+      mobileAuthBtn.textContent = 'Sign In';
+      mobileAuthBtn.onclick = () => openAuthModal();
+      mobileAuthBtn.style.display = 'flex';
+    }
+    if (mobileVendorBtn) mobileVendorBtn.style.display = 'flex';
+    if (mobileSignOutBtn) mobileSignOutBtn.style.display = 'none';
   }
+}
+
+function openAccountDashboard() {
+  if (currentUser?.role === 'vendor') openVendorDashboard();
+  else openCustomerDashboard();
+}
+
+async function signOutUser() {
+  try {
+    if (typeof _supabase !== 'undefined') await _supabase.auth.signOut();
+  } catch (err) {
+    console.warn('Sign out failed:', err);
+  }
+  sessionStorage.removeItem('sb_session');
+  clearSession();
+  closeMobileMenu();
+  showToast('Signed out', 'info');
 }
 
 function getLastSection() {
@@ -412,15 +459,6 @@ function openLocationModal() {
   openModal('locationModal');
 }
 
-function closeCart() {
-  document.getElementById('cartDropdown').classList.remove('open');
-}
-
-function toggleCart() {
-  const dropdown = document.getElementById('cartDropdown');
-  dropdown.classList.toggle('open');
-}
-
 // ============ PASSWORD STRENGTH ============
 function updatePasswordStrength(input, fillId, textId) {
   const val = input.value;
@@ -550,7 +588,10 @@ function updateCartQuantity(productId, quantity) {
 function updateCartUI() {
   const count = cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  document.getElementById('cartCount').textContent = count;
+  const countEl = document.getElementById('cartCount');
+  countEl.textContent = count;
+  const cartBtn = document.getElementById('cartBtn');
+  if (cartBtn) cartBtn.setAttribute('aria-label', `Shopping cart, ${count} item${count === 1 ? '' : 's'}`);
   document.getElementById('cartTotalAmount').textContent = formatPrice(total);
 
   const empty = document.getElementById('cartEmpty');
@@ -560,6 +601,7 @@ function updateCartUI() {
   if (cart.length === 0) {
     empty.style.display = 'block';
     items.style.display = 'none';
+    items.innerHTML = '';
     footer.style.display = 'none';
   } else {
     empty.style.display = 'none';
@@ -567,30 +609,69 @@ function updateCartUI() {
     footer.style.display = 'block';
     items.innerHTML = cart.map(item => `
       <div class="cart-item">
-        <img src="${item.image}" alt="${esc(item.name)}">
+        <img src="${safeUrl(item.image) || 'assets/product-placeholder.svg'}" alt="${esc(item.name)}" width="60" height="60">
         <div class="cart-item-info">
           <h4>${esc(item.name)}</h4>
           <p class="cart-item-vendor">${esc(item.vendor)}</p>
           <p class="cart-item-price">${formatPrice(item.price)} × ${item.quantity}</p>
         </div>
         <div class="cart-item-qty">
-          <button onclick="updateCartQuantity('${item.id}', ${item.quantity - 1})">-</button>
-          <span>${item.quantity}</span>
-          <button onclick="updateCartQuantity('${item.id}', ${item.quantity + 1})">+</button>
+          <button type="button" data-cart-decrease="${esc(item.id)}" aria-label="Decrease quantity of ${esc(item.name)}">&minus;</button>
+          <span>${esc(item.quantity)}</span>
+          <button type="button" data-cart-increase="${esc(item.id)}" aria-label="Increase quantity of ${esc(item.name)}">+</button>
         </div>
-        <button class="cart-item-remove" onclick="removeFromCart('${item.id}')">&times;</button>
+        <button type="button" class="cart-item-remove" data-cart-remove="${esc(item.id)}" aria-label="Remove ${esc(item.name)} from cart">&times;</button>
       </div>
     `).join('');
   }
 }
 
 function openCart() {
-  document.getElementById('cartDropdown').classList.add('open');
+  const dropdown = document.getElementById('cartDropdown');
+  const trigger = document.getElementById('cartBtn');
+  dropdown.classList.add('open');
+  if (trigger) trigger.setAttribute('aria-expanded', 'true');
+}
+
+function closeCart() {
+  const dropdown = document.getElementById('cartDropdown');
+  const trigger = document.getElementById('cartBtn');
+  dropdown.classList.remove('open');
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+}
+
+function toggleCart() {
+  const dropdown = document.getElementById('cartDropdown');
+  const trigger = document.getElementById('cartBtn');
+  const isOpen = dropdown.classList.toggle('open');
+  if (trigger) trigger.setAttribute('aria-expanded', String(isOpen));
 }
 
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#cartDropdown')) {
-    document.getElementById('cartDropdown').classList.remove('open');
+    closeCart();
+  }
+  if (!e.target.closest('#userMenu')) {
+    document.getElementById('userMenu')?.classList.remove('open');
+    document.getElementById('userMenuBtn')?.setAttribute('aria-expanded', 'false');
+  }
+
+  const cartAction = e.target.closest('[data-cart-increase], [data-cart-decrease], [data-cart-remove]');
+  if (cartAction) {
+    const id = cartAction.dataset.cartIncrease ?? cartAction.dataset.cartDecrease ?? cartAction.dataset.cartRemove;
+    const item = cart.find(entry => String(entry.id) === String(id));
+    if (item) {
+      if (cartAction.dataset.cartIncrease != null) updateCartQuantity(item.id, item.quantity + 1);
+      else if (cartAction.dataset.cartDecrease != null) updateCartQuantity(item.id, item.quantity - 1);
+      else removeFromCart(item.id);
+    }
+    return;
+  }
+
+  const addButton = e.target.closest('[data-add-to-cart]');
+  if (addButton) {
+    e.stopPropagation();
+    addToCartById(addButton.dataset.addToCart);
   }
 });
 
@@ -620,7 +701,7 @@ function renderCheckout() {
     <div style="max-height:300px;overflow-y:auto;margin-bottom:20px">
       ${cart.map(item => `
         <div class="cart-item">
-          <img src="${item.image}" alt="${esc(item.name)}">
+          <img src="${safeUrl(item.image) || 'assets/product-placeholder.svg'}" alt="${esc(item.name)}">
           <div class="cart-item-info">
             <h4>${esc(item.name)}</h4>
             <p class="cart-item-vendor">${esc(item.vendor)}</p>
@@ -642,34 +723,62 @@ async function placeOrder() {
 }
 
 // ============ PRODUCTS & VENDORS ============
+const USE_DEMO_PRODUCTS = new URLSearchParams(location.search).get('demo') === '1';
+
 async function loadProducts() {
   try {
-    const {data, error} = await _supabase.from('products').select('*').eq('status', 'active').order('created_at', {ascending: false}).limit(20);
+    // Avoid ordering on created_at: older deployments of the products table
+    // do not have that column, and a failed request pollutes the console.
+    const {data, error} = await _supabase
+      .from('products')
+      .select('*')
+      .eq('status', 'active')
+      .limit(50);
+
     if (error) {
       console.warn('Products query failed:', error.message);
+      allProducts = [];
+      if (USE_DEMO_PRODUCTS) loadMockProducts();
+      else { renderProducts(); renderCategories(); }
+      return;
+    }
+
+    allProducts = data || [];
+    if (allProducts.length === 0 && USE_DEMO_PRODUCTS) {
       loadMockProducts();
       return;
     }
-    allProducts = data || [];
     renderProducts();
     renderCategories();
   } catch (e) {
     console.error('Load products error:', e);
-    loadMockProducts();
+    allProducts = [];
+    renderProducts();
+    renderCategories();
   }
 }
 
 function loadMockProducts() {
   allProducts = [
-    {id: '1', name: 'Portland Cement 50kg', category: 'cement', price: 18500, unit: 'bag', stock: 500, vendor: 'Simba Cement', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 234, image: 'https://images.unsplash.com/photo-1581093458791-9d7e8c8c7b3f?w=400&q=80'},
+    {id: '1', name: 'Portland Cement 50kg', category: 'cement', price: 18500, unit: 'bag', stock: 500, vendor: 'Simba Cement', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 234, image: 'assets/cement.svg'},
     {id: '2', name: 'TMT Steel Rebar 12mm', category: 'steel', price: 45000, unit: 'piece', stock: 200, vendor: 'Africa Steel', vendorRegion: 'Dar es Salaam', rating: 4.9, reviews: 189, image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80'},
     {id: '3', name: 'Ceramic Floor Tiles 60x60', category: 'tiles', price: 28000, unit: 'm²', stock: 1000, vendor: 'Tile Master', vendorRegion: 'Arusha', rating: 4.7, reviews: 156, image: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=400&q=80'},
-    {id: '4', name: 'Corrugated Iron Sheets 3m', category: 'roofing', price: 35000, unit: 'sheet', stock: 300, vendor: 'RoofTech', vendorRegion: 'Mwanza', rating: 4.6, reviews: 98, image: 'https://images.unsplash.com/photo-1581093458791-9d7e8c8c7b3f?w=400&q=80'},
+    {id: '4', name: 'Corrugated Iron Sheets 3m', category: 'roofing', price: 35000, unit: 'sheet', stock: 300, vendor: 'RoofTech', vendorRegion: 'Mwanza', rating: 4.6, reviews: 98, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=80'},
     {id: '5', name: 'Weather Guard Paint 20L', category: 'paint', price: 85000, unit: 'bucket', stock: 150, vendor: 'ColorWorld', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 201, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80'},
-    {id: '6', name: 'PVC Pipes 4 inch', category: 'plumbing', price: 12000, unit: 'piece', stock: 400, vendor: 'PipeLine', vendorRegion: 'Mbeya', rating: 4.5, reviews: 87, image: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&q=80'}
+    {id: '6', name: 'PVC Pipes 4 inch', category: 'plumbing', price: 12000, unit: 'piece', stock: 400, vendor: 'PipeLine', vendorRegion: 'Mbeya', rating: 4.5, reviews: 87, image: 'assets/pipes.svg'},
+    {id: '7', name: 'Concrete Blocks 6 inch', category: 'cement', price: 3200, unit: 'piece', stock: 2000, vendor: 'Simba Cement', vendorRegion: 'Dar es Salaam', rating: 4.7, reviews: 145, image: 'assets/cement.svg'},
+    {id: '8', name: 'Stainless Steel Pipes 2 inch', category: 'steel', price: 28000, unit: 'meter', stock: 500, vendor: 'Africa Steel', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 92, image: 'assets/pipes.svg'},
+    {id: '9', name: 'Porcelain Wall Tiles 30x60', category: 'tiles', price: 22000, unit: 'm²', stock: 800, vendor: 'Tile Master', vendorRegion: 'Arusha', rating: 4.6, reviews: 78, image: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&q=80'},
+    {id: '10', name: 'Clay Roof Tiles Red', category: 'roofing', price: 1800, unit: 'piece', stock: 1500, vendor: 'RoofTech', vendorRegion: 'Mwanza', rating: 4.5, reviews: 67, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=80'},
+    {id: '11', name: 'Acrylic Emulsion Paint 10L', category: 'paint', price: 42000, unit: 'bucket', stock: 300, vendor: 'ColorWorld', vendorRegion: 'Dar es Salaam', rating: 4.7, reviews: 112, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80'},
+    {id: '12', name: 'HDPE Pipes 63mm', category: 'plumbing', price: 8500, unit: 'meter', stock: 1000, vendor: 'PipeLine', vendorRegion: 'Mbeya', rating: 4.6, reviews: 54, image: 'assets/pipes.svg'}
   ];
   renderProducts();
   renderCategories();
+}
+
+function productImage(product) {
+  return safeUrl(product && product.image) || 'assets/product-placeholder.svg';
 }
 
 function renderProducts() {
@@ -677,28 +786,64 @@ function renderProducts() {
   if (!grid) return;
 
   let filtered = [...allProducts];
-  if (currentSort === 'price-asc') filtered.sort((a, b) => a.price - b.price);
-  else if (currentSort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
-  else if (currentSort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
-  else if (currentSort === 'newest') filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const query = activeFilters.search.toLowerCase();
+
+  if (activeFilters.category) {
+    filtered = filtered.filter(p => String(p.category || '').toLowerCase() === activeFilters.category);
+  }
+  if (query) {
+    filtered = filtered.filter(p => [p.name, p.vendor, p.category, p.vendorRegion, p.description]
+      .some(value => String(value || '').toLowerCase().includes(query)));
+  }
+
+  switch (currentSort) {
+    case 'price-asc': filtered.sort((a, b) => Number(a.price) - Number(b.price)); break;
+    case 'price-desc': filtered.sort((a, b) => Number(b.price) - Number(a.price)); break;
+    case 'rating': filtered.sort((a, b) => Number(b.rating) - Number(a.rating)); break;
+    case 'newest': filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); break;
+  }
+
+  updateProductsHeader(filtered.length);
+
+  if (filtered.length === 0) {
+    const filtersActive = Boolean(activeFilters.search || activeFilters.category);
+    const label = activeFilters.search
+      ? `“${esc(activeFilters.search)}”`
+      : 'this category';
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">${filtersActive ? '🔍' : '🏗️'}</div>
+        <h3>${filtersActive ? 'No products match your search' : 'No products listed yet'}</h3>
+        <p>${filtersActive
+          ? `We couldn't find anything for ${label}. Try another term or browse everything.`
+          : 'Verified vendors are onboarding. Check back soon, or register your business and be the first.'}</p>
+        ${filtersActive
+          ? '<button class="btn btn-primary" onclick="clearProductFilters(event)">Clear filters</button>'
+          : '<button class="btn btn-primary" onclick="openVendorRegistration()">Become a Vendor</button>'}
+      </div>`;
+    return;
+  }
 
   grid.innerHTML = filtered.map(p => `
-    <article class="card product-card" role="listitem" onclick="viewProduct('${p.id}')">
-      <div class="product-image"><img src="${p.image}" alt="${esc(p.name)}" loading="lazy" width="400" height="300"></div>
+    <article class="card product-card" role="listitem" data-product-id="${esc(p.id)}" onclick="viewProduct(this.dataset.productId)">
+      <div class="product-image">
+        <img src="${productImage(p)}" alt="${esc(p.name)}" loading="lazy" width="400" height="300"
+             onerror="this.onerror=null;this.src='assets/product-placeholder.svg'">
+      </div>
       <div class="product-body">
-        <div class="product-category"><span class="badge badge-info">${p.category}</span></div>
+        <div class="product-category"><span class="badge badge-info">${esc(p.category)}</span></div>
         <h3 class="product-name">${esc(p.name)}</h3>
         <div class="product-meta">
           <span class="product-vendor">🏪 ${esc(p.vendor)}</span>
           <span class="product-location">📍 ${esc(p.vendorRegion)}</span>
         </div>
         <div class="product-rating">
-          <span class="rating">★ ${p.rating}</span>
-          <span class="reviews">(${p.reviews} reviews)</span>
+          <span class="rating">★ ${esc(p.rating == null ? '—' : p.rating)}</span>
+          <span class="reviews">(${esc(p.reviews == null ? 0 : p.reviews)} reviews)</span>
         </div>
         <div class="product-footer">
-          <span class="product-price">${formatPrice(p.price)} <span class="unit">/${p.unit}</span></span>
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();addToCart(allProducts.find(p => p.id === '${p.id}'))">Add to Cart</button>
+          <span class="product-price">${formatPrice(p.price)} <span class="unit">/${esc(p.unit || 'unit')}</span></span>
+          <button class="btn btn-primary btn-sm" data-add-to-cart="${esc(p.id)}">Add to Cart</button>
         </div>
       </div>
     </article>
@@ -708,13 +853,23 @@ function renderProducts() {
 function renderCategories() {
   const grid = document.getElementById('categoriesGrid');
   if (!grid) return;
-  grid.innerHTML = CATEGORIES.map(c => `
-    <article class="card category-card" role="listitem" onclick="filterByCategory('${c.id}')">
-      <div class="category-icon">${c.icon}</div>
-      <h3>${c.name}</h3>
-      <span class="badge badge-info">${c.count} products</span>
-    </article>
-  `).join('');
+
+  const counts = new Map();
+  allProducts.forEach(p => {
+    const key = String(p.category || '').toLowerCase();
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+
+  grid.innerHTML = CATEGORIES.map(c => {
+    const count = counts.get(c.id) || 0;
+    const selected = activeFilters.category === c.id;
+    return `
+      <button type="button" class="card category-card${selected ? ' selected' : ''}" aria-pressed="${selected}" onclick="filterByCategory('${c.id}')">
+        <div class="category-icon">${c.icon}</div>
+        <h3>${esc(c.name)}</h3>
+        ${allProducts.length ? `<span class="badge badge-info">${count} product${count === 1 ? '' : 's'}</span>` : ''}
+      </button>`;
+  }).join('');
 }
 
 function renderVendors() {
@@ -722,23 +877,25 @@ function renderVendors() {
   if (!carousel) return;
 
   const vendors = [
-    {id: '1', name: 'Simba Cement', region: 'Dar es Salaam', rating: 4.9, products: 45, verified: true, avatar: '🏭'},
-    {id: '2', name: 'Africa Steel', region: 'Dar es Salaam', rating: 4.8, products: 32, verified: true, avatar: '⚙️'},
-    {id: '3', name: 'Tile Master', region: 'Arusha', rating: 4.7, products: 28, verified: true, avatar: '🟦'},
-    {id: '4', name: 'RoofTech', region: 'Mwanza', rating: 4.6, products: 19, verified: true, avatar: '🏠'},
-    {id: '5', name: 'ColorWorld', region: 'Dar es Salaam', rating: 4.8, products: 23, verified: true, avatar: '🎨'},
-    {id: '6', name: 'PipeLine', region: 'Mbeya', rating: 4.5, products: 15, verified: true, avatar: '🔧'}
+    {id: '1', name: 'Simba Cement', region: 'Dar es Salaam', rating: 4.9, products: 45, verified: true, image: 'assets/cement.svg'},
+    {id: '2', name: 'Africa Steel', region: 'Dar es Salaam', rating: 4.8, products: 32, verified: true, image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200&q=80'},
+    {id: '3', name: 'Tile Master', region: 'Arusha', rating: 4.7, products: 28, verified: true, image: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=200&q=80'},
+    {id: '4', name: 'RoofTech', region: 'Mwanza', rating: 4.6, products: 19, verified: true, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=80'},
+    {id: '5', name: 'ColorWorld', region: 'Dar es Salaam', rating: 4.8, products: 23, verified: true, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=200&q=80'},
+    {id: '6', name: 'PipeLine', region: 'Mbeya', rating: 4.5, products: 15, verified: true, image: 'assets/pipes.svg'}
   ];
 
   carousel.innerHTML = vendors.map(v => `
     <article class="card vendor-card" role="listitem">
       <div class="vendor-header">
-        <div class="vendor-avatar">${v.avatar}</div>
+        <div class="vendor-avatar">
+          <img src="${safeUrl(v.image) || 'assets/product-placeholder.svg'}" alt="${esc(v.name)}" loading="lazy" width="56" height="56" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">
+        </div>
         <div>
-          <h4>${v.name}</h4>
+          <h3>${esc(v.name)}</h3>
           <div class="vendor-meta">
-            <span class="vendor-location">📍 ${v.region}</span>
-            <span class="badge badge-success">${v.products} products</span>
+            <span class="vendor-location">📍 ${esc(v.region)}</span>
+            <span class="badge badge-success">${esc(v.products)} products</span>
           </div>
         </div>
       </div>
@@ -752,8 +909,66 @@ function renderVendors() {
   `).join('');
 }
 
+function parseProductFilters() {
+  const hash = location.hash.replace(/^#/, '');
+  if (!hash.startsWith('products')) return {search: '', category: ''};
+  const params = new URLSearchParams(hash.split('?')[1] || '');
+  return {
+    search: (params.get('search') || '').trim(),
+    category: (params.get('category') || '').trim()
+  };
+}
+
+function applyProductFilters() {
+  activeFilters = parseProductFilters();
+  renderProducts();
+  renderCategories();
+}
+
+function setProductFilters(filters) {
+  const params = new URLSearchParams();
+  if (filters.search) params.set('search', filters.search);
+  if (filters.category) params.set('category', filters.category);
+  const hash = '#products' + (params.toString() ? '?' + params.toString() : '');
+
+  history.pushState(null, '', hash);
+  applyProductFilters();
+
+  const section = document.getElementById('products');
+  if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
 function filterByCategory(categoryId) {
-  window.location.href = `#products?category=${categoryId}`;
+  setProductFilters({category: categoryId});
+}
+
+function clearProductFilters(event) {
+  if (event) event.preventDefault();
+  history.pushState(null, '', '#products');
+  applyProductFilters();
+  const section = document.getElementById('products');
+  if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function updateProductsHeader(count) {
+  const subtitle = document.getElementById('productsSubtitle');
+  if (!subtitle) return;
+
+  const parts = [];
+  if (activeFilters.category) {
+    const category = CATEGORIES.find(c => c.id === activeFilters.category);
+    parts.push(category ? category.name : activeFilters.category);
+  }
+  if (activeFilters.search) parts.push(`“${activeFilters.search}”`);
+
+  subtitle.textContent = parts.length
+    ? `${count} product${count === 1 ? '' : 's'} matching ${parts.join(' in ')}`
+    : 'Top-rated materials from verified vendors';
+}
+
+function addToCartById(productId) {
+  const product = allProducts.find(p => String(p.id) === String(productId));
+  if (product) addToCart(product);
 }
 
 function viewProduct(productId) {
@@ -870,7 +1085,7 @@ async function handleVendorRegister(e) {
   const form = e.target;
   const email = form.email.value.trim().toLowerCase();
   const password = form.password.value;
-  const name = form.name.value.trim();
+  const name = form.fullName.value.trim();
   const phone = form.phone.value.trim();
   if (!email || !password || !name || !phone) { showToast('Please fill in all fields', 'danger'); return; }
   const agreeEl = form.agreeTerms;
@@ -896,7 +1111,7 @@ async function handleVendorRegister(e) {
             tin: form.vendorTin?.value?.trim() || null,
             bankAccount: form.vendorBank?.value?.trim() || null,
             photo: vendorUploadedImage || null,
-            region: form.vendorRegion?.value?.trim() || null,
+            region: form.region?.value?.trim() || null,
             lat: form.vendorLat?.value ? parseFloat(form.vendorLat.value) || null : null,
             lng: form.vendorLng?.value ? parseFloat(form.vendorLng.value) || null : null
           }
@@ -905,9 +1120,12 @@ async function handleVendorRegister(e) {
       if (authError) throw new Error(authError.message);
       if (authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
       const userId = authData.user.id;
-      const vendorData = { id: userId, email, name, role: 'vendor', storeName, phone, brela: form.brela?.value?.trim() || null, licence: form.licence?.value?.trim() || null, nationalId: form.vendorNationalId?.value?.trim() || null, tin: form.vendorTin?.value?.trim() || null, bankAccount: form.vendorBank?.value?.trim() || null, photo: vendorUploadedImage || null, region: form.vendorRegion?.value?.trim() || null, lat: form.vendorLat?.value ? parseFloat(form.vendorLat.value) || null : null, lng: form.vendorLng?.value ? parseFloat(form.vendorLng.value) || null : null };
+      const vendorData = { id: userId, email, name, role: 'vendor', storeName, phone, brela: form.brela?.value?.trim() || null, licence: form.licence?.value?.trim() || null, nationalId: form.vendorNationalId?.value?.trim() || null, tin: form.vendorTin?.value?.trim() || null, bankAccount: form.vendorBank?.value?.trim() || null, photo: vendorUploadedImage || null, region: form.region?.value?.trim() || null, lat: form.vendorLat?.value ? parseFloat(form.vendorLat.value) || null : null, lng: form.vendorLng?.value ? parseFloat(form.vendorLng.value) || null : null };
       const { error: profileError } = await _supabase.from('vendors').insert(vendorData);
-      if (profileError) { await _supabase.auth.admin.deleteUser(authData.user.id); throw new Error(profileError.message); }
+      if (profileError) {
+        console.warn('Vendor profile creation failed:', profileError.message);
+        showToast('Account created. Our team will finish verifying your vendor profile.', 'warning');
+      }
       currentUser = { name: storeName, email, role: 'vendor', vendorEmail: email };
     }
     closeModal('authModal');
@@ -1004,9 +1222,7 @@ function openCustomerDashboard() {
 // ============ SEARCH & SORT ============
 document.getElementById('heroSearchBtn')?.addEventListener('click', () => {
   const query = document.getElementById('heroSearch').value.trim();
-  if (query) {
-    window.location.href = `#products?search=${encodeURIComponent(query)}`;
-  }
+  setProductFilters({search: query});
 });
 
 document.getElementById('heroSearch')?.addEventListener('keypress', (e) => {
@@ -1019,11 +1235,42 @@ document.getElementById('sortSelect')?.addEventListener('change', (e) => {
 });
 
 // ============ MOBILE MENU ============
+function closeMobileMenu() {
+  const navLinks = document.getElementById('navLinks');
+  const btn = document.getElementById('mobileMenuBtn');
+  if (!navLinks) return;
+  navLinks.classList.remove('open');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('menu-open');
+}
+
 document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
   const navLinks = document.getElementById('navLinks');
   const btn = document.getElementById('mobileMenuBtn');
-  navLinks.classList.toggle('open');
-  btn.setAttribute('aria-expanded', navLinks.classList.contains('open'));
+  const isOpen = navLinks.classList.toggle('open');
+  btn.setAttribute('aria-expanded', String(isOpen));
+  document.body.classList.toggle('menu-open', isOpen);
+});
+
+document.querySelectorAll('#navLinks a, #navLinks button').forEach(el => {
+  el.addEventListener('click', closeMobileMenu);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeMobileMenu();
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 900) closeMobileMenu();
+});
+
+// ============ ACCOUNT MENU ============
+document.getElementById('userMenuBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = document.getElementById('userMenu');
+  const btn = document.getElementById('userMenuBtn');
+  const isOpen = menu.classList.toggle('open');
+  btn.setAttribute('aria-expanded', String(isOpen));
 });
 
 // ============ HEADER SCROLL ============
@@ -1036,43 +1283,38 @@ window.addEventListener('scroll', () => {
 // ============ SMOOTH SCROLL ============
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   anchor.addEventListener('click', function(e) {
-    const targetId = this.getAttribute('href');
-    if (targetId === '#') return;
-    e.preventDefault();
-    const target = document.querySelector(targetId);
+    if (e.defaultPrevented) return;
+    const href = this.getAttribute('href');
+    if (!href || href === '#') return;
+
+    // Strip ?search= / ?category= before using the hash as a selector.
+    const selector = href.split('?')[0];
+    let target = null;
+    try { target = document.querySelector(selector); } catch (err) { target = null; }
+
     if (target) {
+      e.preventDefault();
       target.scrollIntoView({behavior: 'smooth', block: 'start'});
-      history.pushState(null, '', targetId);
+      history.pushState(null, '', href);
     }
   });
 });
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
+  activeFilters = parseProductFilters();
   loadSession();
+  updateAuthUI();
   loadProducts();
   renderVendors();
   populateRegionSelects();
 
-  document.getElementById('heroSearch')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') document.getElementById('heroSearchBtn')?.click();
-  });
+  window.addEventListener('hashchange', applyProductFilters);
 
   document.getElementById('locationBtn')?.addEventListener('click', () => openModal('locationModal'));
-  document.getElementById('mobileLocationBar')?.addEventListener('click', () => openModal('locationModal'));
 
   document.getElementById('cartBtn')?.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleCart();
-  });
-
-  document.getElementById('authBtn')?.addEventListener('click', () => openAuthModal());
-  document.getElementById('vendorBtn')?.addEventListener('click', () => openVendorRegistration());
-
-  document.querySelectorAll('.category-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const category = card.querySelector('h3').textContent.toLowerCase().replace(/\s+/g, '-');
-      filterByCategory(category);
-    });
   });
 });
