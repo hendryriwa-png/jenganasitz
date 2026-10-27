@@ -26,6 +26,11 @@ const CATEGORIES = [
   {id: 'hardware', name: 'Hardware & Fasteners', icon: '🔩', count: 289}
 ];
 
+function categoryLabel(categoryId) {
+  const category = CATEGORIES.find(item => item.id === String(categoryId || '').toLowerCase());
+  return category ? category.name : (categoryId || 'Materials');
+}
+
 const VENDOR_TYPES = [
   {key: 'retail', label: 'Retail Seller', icon: '🏪', desc: 'Sell directly to consumers at your store', features: ['Direct sales', 'Walk-in customers', 'Local delivery']},
   {key: 'wholesale', label: 'Wholesaler', icon: '🏭', desc: 'Bulk sales to other businesses', features: ['Bulk pricing', 'B2B focus', 'Volume discounts']},
@@ -44,11 +49,13 @@ let cart = [];
 let allProducts = [];
 let allVendors = [];
 let currentSort = 'featured';
-let activeFilters = {search: '', category: ''};
+let activeFilters = {search: '', category: '', vendor: ''};
 let demoMode = false;
 let supabaseAvailable = true;
 let regDocData = {};
 let vendorUploadedImage = null;
+let vendorsExpanded = false;
+let dashboardProducts = [];
 
 // ============ UTILITY FUNCTIONS ============
 function formatPrice(amount) {
@@ -692,11 +699,24 @@ function saveLocation() {
 
 // ============ CART ============
 function addToCart(product, quantity = 1) {
-  const existing = cart.find(item => item.id === product.id);
+  const stock = Number(product.stock);
+  const maxQuantity = Number.isFinite(stock) && stock > 0 ? stock : 9999;
+  const existing = cart.find(item => String(item.id) === String(product.id));
+  const current = existing ? existing.quantity : 0;
+  const next = Math.min(maxQuantity, current + Math.max(1, Number(quantity) || 1));
+
   if (existing) {
-    existing.quantity += quantity;
+    if (next === existing.quantity) {
+      showToast(`Only ${stock} of ${product.name} available.`, 'warning');
+      return;
+    }
+    existing.quantity = next;
   } else {
-    cart.push({...product, quantity});
+    if (next <= 0) {
+      showToast('This product is out of stock.', 'warning');
+      return;
+    }
+    cart.push({...product, quantity: next});
   }
   updateCartUI();
   showToast(`${product.name} added to cart`, 'success');
@@ -709,9 +729,11 @@ function removeFromCart(productId) {
 }
 
 function updateCartQuantity(productId, quantity) {
-  const item = cart.find(item => item.id === productId);
+  const item = cart.find(item => String(item.id) === String(productId));
   if (item) {
-    item.quantity = Math.max(1, quantity);
+    const stock = Number(item.stock);
+    const maxQuantity = Number.isFinite(stock) && stock > 0 ? stock : 9999;
+    item.quantity = Math.min(maxQuantity, Math.max(1, Number(quantity) || 1));
     updateCartUI();
   }
 }
@@ -808,6 +830,10 @@ document.addEventListener('click', (e) => {
 
 // ============ CHECKOUT ============
 function openCheckout() {
+  if (USE_DEMO_PRODUCTS) {
+    showToast('This is a demo catalogue. Checkout is disabled — browse the live catalogue to place an order.', 'info', 6000);
+    return;
+  }
   if (cart.length === 0) {
     showToast('Your cart is empty', 'warning');
     return;
@@ -823,89 +849,321 @@ function openCheckout() {
   renderCheckout();
 }
 
-function renderCheckout() {
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const content = document.getElementById('checkoutContent');
-  if (!content) return;
-  content.innerHTML = `
-    <div class="auth-head"><h3>Checkout</h3><p>Review your order</p></div>
-    <div style="max-height:300px;overflow-y:auto;margin-bottom:20px">
-      ${cart.map(item => `
-        <div class="cart-item">
-          <img src="${safeUrl(item.image) || 'assets/product-placeholder.svg'}" alt="${esc(item.name)}">
-          <div class="cart-item-info">
-            <h4>${esc(item.name)}</h4>
-            <p class="cart-item-vendor">${esc(item.vendor)}</p>
-            <p class="cart-item-price">${formatPrice(item.price)} × ${item.quantity}</p>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-    <div class="cart-total" style="margin-bottom:20px"><span>Total</span><span class="cart-total-amount">${formatPrice(total)}</span></div>
-    <div class="input-group"><label>Delivery Address</label><textarea placeholder="Enter delivery address" rows="3" required></textarea></div>
-    <div class="input-group"><label>Phone for Delivery</label><input type="tel" placeholder="+255 7XX XXX XXX" required autocomplete="tel"></div>
-    <button class="btn btn-primary btn-lg btn-block" onclick="placeOrder()">Place Order</button>
-  `;
+function cartVendorGroups() {
+  const groups = new Map();
+  cart.forEach(item => {
+    const key = item.vendorEmail || item.vendor || 'verified-vendor';
+    if (!groups.has(key)) {
+      groups.set(key, {vendor: item.vendor || 'Verified vendor', items: []});
+    }
+    groups.get(key).items.push(item);
+  });
+  return [...groups.values()];
 }
 
-async function placeOrder() {
-  showToast('Order placement coming soon', 'info');
-  closeModal('checkoutModal');
+function renderCheckout() {
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const groups = cartVendorGroups();
+  const content = document.getElementById('checkoutContent');
+  if (!content) return;
+
+  if (cart.length === 0) {
+    content.innerHTML = `
+      <div class="checkout-success">
+        <div class="checkout-success-icon">🛒</div>
+        <h3>Your cart is empty</h3>
+        <p>Add materials from the catalogue to start an order.</p>
+        <button class="btn btn-primary" onclick="closeModal('checkoutModal');scrollToProducts()">Browse products</button>
+      </div>`;
+    return;
+  }
+
+  const regionOptions = REGIONS.map(region => `<option value="${esc(region)}"${region === currentLocation ? ' selected' : ''}>${esc(region)}</option>`).join('');
+  const phone = currentUser?.phone || '';
+
+  content.innerHTML = `
+    <form id="checkoutForm" onsubmit="placeOrder(event)" novalidate>
+      <div class="auth-head">
+        <h3>Review your order</h3>
+        <p>${itemCount} item${itemCount === 1 ? '' : 's'} from ${groups.length} vendor${groups.length === 1 ? '' : 's'}</p>
+      </div>
+      <div class="checkout-vendors">
+        ${groups.map(group => `
+          <div class="checkout-vendor-group">
+            <div class="checkout-vendor-name">🏪 ${esc(group.vendor)}</div>
+            ${group.items.map(item => `
+              <div class="cart-item">
+                <img src="${safeUrl(item.image) || 'assets/product-placeholder.svg'}" alt="${esc(item.name)}" width="48" height="48">
+                <div class="cart-item-info">
+                  <h4>${esc(item.name)}</h4>
+                  <p class="cart-item-price">${formatPrice(item.price)} × ${esc(item.quantity)} ${esc(item.unit || '')}</p>
+                </div>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>
+      <div class="cart-total"><span>Order subtotal</span><span class="cart-total-amount">${formatPrice(total)}</span></div>
+      <p class="checkout-note">Delivery is arranged directly with each vendor after you order. Pay cash or M-Pesa on delivery.</p>
+
+      <div class="input-group">
+        <label for="checkoutAddress">Delivery address</label>
+        <textarea id="checkoutAddress" name="address" rows="3" required maxlength="500"
+          placeholder="Street, plot number, landmark, and area">${esc(currentUser?.address || '')}</textarea>
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label for="checkoutRegion">Region</label>
+          <select id="checkoutRegion" name="region" required>${regionOptions}</select>
+        </div>
+        <div class="input-group">
+          <label for="checkoutPhone">Phone for delivery</label>
+          <input id="checkoutPhone" name="phone" type="tel" value="${esc(phone)}"
+            placeholder="+255 7XX XXX XXX" required autocomplete="tel" maxlength="20">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Payment on delivery</label>
+        <div class="payment-options">
+          <label class="payment-option"><input type="radio" name="payment" value="cash_on_delivery" checked><span>Cash on delivery</span></label>
+          <label class="payment-option"><input type="radio" name="payment" value="mpesa_on_delivery"><span>M-Pesa on delivery</span></label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Place order · ${formatPrice(total)}</button>
+      <p class="checkout-fineprint">By placing this order you agree to the <a href="legal.html#terms" target="_blank" rel="noopener">terms of sale</a>.</p>
+    </form>`;
+}
+
+function friendlyOrderError(error) {
+  const message = String(error?.message || error || '');
+  const cleaned = message.replace(/^place_marketplace_order:\s*/i, '');
+  return cleaned || 'We could not place your order. Please try again.';
+}
+
+async function placeOrder(event) {
+  if (event) event.preventDefault();
+  if (!currentUser) {
+    closeModal('checkoutModal');
+    openAuthModal('signin');
+    showToast('Please sign in to place your order', 'info');
+    return;
+  }
+  if (USE_DEMO_PRODUCTS) {
+    showToast('Checkout is disabled in demo mode. Browse the live catalogue to place an order.', 'info', 6000);
+    return;
+  }
+
+  const form = document.getElementById('checkoutForm');
+  if (!form) return;
+
+  const fieldValue = name => {
+    const field = form.elements.namedItem(name);
+    return field ? String(field.value || '') : '';
+  };
+  const address = fieldValue('address').trim();
+  const phone = fieldValue('phone').trim();
+  const region = fieldValue('region').trim();
+  const payment = fieldValue('payment') || 'cash_on_delivery';
+  const digits = phone.replace(/[^\d+]/g, '');
+
+  if (address.length < 8) {
+    showToast('Please enter a full delivery address.', 'warning');
+    form.elements.namedItem('address')?.focus();
+    return;
+  }
+  if (!/^(?:\+?255|0)\d{9}$/.test(digits)) {
+    showToast('Enter a valid Tanzanian phone number, for example +255 754 123 456.', 'warning');
+    form.elements.namedItem('phone')?.focus();
+    return;
+  }
+  if (cart.length === 0) {
+    showToast('Your cart is empty.', 'warning');
+    return;
+  }
+
+  const items = cart.map(item => ({product_id: String(item.id), quantity: Number(item.quantity)}));
+  const itemCount = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  showLoading('Placing your order...');
+  try {
+    const {data, error} = await _supabase.rpc('place_marketplace_order', {
+      p_items: items,
+      p_address: address,
+      p_phone: phone,
+      p_region: region,
+      p_payment_method: payment
+    });
+    if (error) throw error;
+    if (!data || !data.group_id) throw new Error('No order confirmation was received.');
+
+    cart = [];
+    updateCartUI();
+    closeCart();
+    renderCheckoutConfirmation(data, phone, itemCount);
+    await loadProducts();
+  } catch (error) {
+    showToast(friendlyOrderError(error), 'danger', 7000);
+  } finally {
+    hideLoading();
+  }
+}
+
+function renderCheckoutConfirmation(data, phone, itemCount = 0) {
+  const content = document.getElementById('checkoutContent');
+  if (!content) return;
+  const vendorCount = Number(data.vendor_count) || 1;
+  const total = Number(data.total) || 0;
+  content.innerHTML = `
+    <div class="checkout-success">
+      <div class="checkout-success-icon">✓</div>
+      <h3>Order placed</h3>
+      <p class="checkout-order-number">Order #${esc(data.group_id)}</p>
+      <div class="checkout-success-summary">
+        <div><span>Vendors</span><strong>${vendorCount}</strong></div>
+        <div><span>Items</span><strong>${itemCount || '—'}</strong></div>
+        <div><span>Total</span><strong>${formatPrice(total)}</strong></div>
+      </div>
+      <p>Your order has been sent to ${vendorCount === 1 ? 'the vendor' : 'the vendors'}. They will call <strong>${esc(phone)}</strong> to confirm delivery and payment.</p>
+      <div class="checkout-success-actions">
+        <button class="btn btn-primary" onclick="closeModal('checkoutModal');openCustomerDashboard()">View my orders</button>
+        <button class="btn btn-outline" onclick="closeModal('checkoutModal');scrollToProducts()">Continue shopping</button>
+      </div>
+    </div>`;
 }
 
 // ============ PRODUCTS & VENDORS ============
 const USE_DEMO_PRODUCTS = new URLSearchParams(location.search).get('demo') === '1';
 
 async function loadProducts() {
+  if (USE_DEMO_PRODUCTS) {
+    loadMockProducts();
+    return;
+  }
   try {
-    // Avoid ordering on created_at: older deployments of the products table
-    // do not have that column, and a failed request pollutes the console.
-    const {data, error} = await _supabase
-      .from('products')
-      .select('*')
-      .eq('status', 'active')
-      .limit(50);
+    const [productsResult, vendorsResult] = await Promise.all([
+      _supabase.from('products').select('*').eq('status', 'active').eq('deleted', false).limit(100),
+      _supabase.from('public_vendors').select('*').order('joined_at', {ascending: true}).limit(50)
+    ]);
 
-    if (error) {
-      console.warn('Products query failed:', error.message);
-      allProducts = [];
-      if (USE_DEMO_PRODUCTS) loadMockProducts();
-      else { renderProducts(); renderCategories(); }
-      return;
-    }
+    if (productsResult.error) console.warn('Products query failed:', productsResult.error.message);
+    if (vendorsResult.error) console.warn('Vendors query failed:', vendorsResult.error.message);
 
-    allProducts = data || [];
+    allProducts = productsResult.error ? [] : (productsResult.data || []);
+    allVendors = vendorsResult.error ? [] : (vendorsResult.data || []);
+
     if (allProducts.length === 0 && USE_DEMO_PRODUCTS) {
       loadMockProducts();
       return;
     }
-    renderProducts();
-    renderCategories();
-  } catch (e) {
-    console.error('Load products error:', e);
+
+    hydrateVendors();
+    renderStorefront();
+  } catch (error) {
+    console.error('Load storefront error:', error);
     allProducts = [];
-    renderProducts();
-    renderCategories();
+    allVendors = [];
+    renderStorefront();
   }
+}
+
+function hydrateVendors() {
+  const byName = new Map();
+  allVendors.forEach(vendor => {
+    byName.set(String(vendor.store_name || '').toLowerCase(), vendor);
+  });
+
+  allProducts.forEach(product => {
+    const vendor = byName.get(String(product.vendor || '').toLowerCase());
+    product.vendorRegion = vendor?.region || product.vendorRegion || 'Tanzania';
+  });
+
+  allVendors = allVendors.map(vendor => {
+    const vendorProducts = allProducts.filter(product =>
+      String(product.vendor || '').toLowerCase() === String(vendor.store_name || '').toLowerCase()
+    );
+    const average = vendorProducts.length
+      ? vendorProducts.reduce((sum, product) => sum + Number(product.rating || 0), 0) / vendorProducts.length
+      : Number(vendor.rating || 0);
+    return {
+      ...vendor,
+      product_count: vendorProducts.length || Number(vendor.product_count || 0),
+      rating: average ? Number(average.toFixed(2)) : null
+    };
+  });
+}
+
+function renderStorefront() {
+  renderProducts();
+  renderCategories();
+  renderVendors();
+  updateHeroStats();
+  updateTrustLogos();
+}
+
+function setStatValue(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+}
+
+function updateHeroStats() {
+  const vendorCount = allVendors.length;
+  const productCount = allProducts.length;
+  const categories = new Set(allProducts.map(product => product.category).filter(Boolean));
+  const regions = new Set(allVendors.map(vendor => vendor.region).filter(Boolean));
+
+  setStatValue('statVendors', vendorCount || null);
+  setStatValue('statProducts', productCount || null);
+  setStatValue('statCategories', categories.size || CATEGORIES.length);
+  setStatValue('statRegions', regions.size || null);
+
+  const badge = document.getElementById('heroBadgeText');
+  if (badge) {
+    badge.textContent = vendorCount
+      ? `${vendorCount} verified vendor${vendorCount === 1 ? '' : 's'} · ${productCount} material${productCount === 1 ? '' : 's'} listed`
+      : 'Verified suppliers across Tanzania';
+  }
+}
+
+function updateTrustLogos() {
+  const block = document.getElementById('heroTrust');
+  const logos = document.getElementById('heroTrustLogos');
+  if (!block || !logos) return;
+
+  const featured = allVendors.slice(0, 5);
+  if (featured.length < 3) {
+    block.style.display = 'none';
+    logos.innerHTML = '';
+    return;
+  }
+
+  block.style.display = '';
+  logos.innerHTML = featured.map(vendor => `<span class="trust-logo">${esc(vendor.store_name)}</span>`).join('');
 }
 
 function loadMockProducts() {
   allProducts = [
-    {id: '1', name: 'Portland Cement 50kg', category: 'cement', price: 18500, unit: 'bag', stock: 500, vendor: 'Simba Cement', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 234, image: 'assets/cement.svg'},
-    {id: '2', name: 'TMT Steel Rebar 12mm', category: 'steel', price: 45000, unit: 'piece', stock: 200, vendor: 'Africa Steel', vendorRegion: 'Dar es Salaam', rating: 4.9, reviews: 189, image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80'},
-    {id: '3', name: 'Ceramic Floor Tiles 60x60', category: 'tiles', price: 28000, unit: 'm²', stock: 1000, vendor: 'Tile Master', vendorRegion: 'Arusha', rating: 4.7, reviews: 156, image: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=400&q=80'},
-    {id: '4', name: 'Corrugated Iron Sheets 3m', category: 'roofing', price: 35000, unit: 'sheet', stock: 300, vendor: 'RoofTech', vendorRegion: 'Mwanza', rating: 4.6, reviews: 98, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=80'},
-    {id: '5', name: 'Weather Guard Paint 20L', category: 'paint', price: 85000, unit: 'bucket', stock: 150, vendor: 'ColorWorld', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 201, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80'},
-    {id: '6', name: 'PVC Pipes 4 inch', category: 'plumbing', price: 12000, unit: 'piece', stock: 400, vendor: 'PipeLine', vendorRegion: 'Mbeya', rating: 4.5, reviews: 87, image: 'assets/pipes.svg'},
-    {id: '7', name: 'Concrete Blocks 6 inch', category: 'cement', price: 3200, unit: 'piece', stock: 2000, vendor: 'Simba Cement', vendorRegion: 'Dar es Salaam', rating: 4.7, reviews: 145, image: 'assets/cement.svg'},
-    {id: '8', name: 'Stainless Steel Pipes 2 inch', category: 'steel', price: 28000, unit: 'meter', stock: 500, vendor: 'Africa Steel', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 92, image: 'assets/pipes.svg'},
-    {id: '9', name: 'Porcelain Wall Tiles 30x60', category: 'tiles', price: 22000, unit: 'm²', stock: 800, vendor: 'Tile Master', vendorRegion: 'Arusha', rating: 4.6, reviews: 78, image: 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=400&q=80'},
-    {id: '10', name: 'Clay Roof Tiles Red', category: 'roofing', price: 1800, unit: 'piece', stock: 1500, vendor: 'RoofTech', vendorRegion: 'Mwanza', rating: 4.5, reviews: 67, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=80'},
-    {id: '11', name: 'Acrylic Emulsion Paint 10L', category: 'paint', price: 42000, unit: 'bucket', stock: 300, vendor: 'ColorWorld', vendorRegion: 'Dar es Salaam', rating: 4.7, reviews: 112, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80'},
-    {id: '12', name: 'HDPE Pipes 63mm', category: 'plumbing', price: 8500, unit: 'meter', stock: 1000, vendor: 'PipeLine', vendorRegion: 'Mbeya', rating: 4.6, reviews: 54, image: 'assets/pipes.svg'}
+    {id: 'demo-1', name: 'Portland Cement 50kg', category: 'cement', price: 18500, unit: 'bag', stock: 500, vendor: 'Simba Cement', vendorEmail: 'demo@simba.co.tz', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 234, image: 'assets/cement.svg'},
+    {id: 'demo-2', name: 'TMT Steel Rebar 12mm', category: 'steel', price: 32000, unit: 'piece', stock: 200, vendor: 'Africa Steel', vendorEmail: 'demo@africasteel.co.tz', vendorRegion: 'Dar es Salaam', rating: 4.9, reviews: 189, image: 'https://images.unsplash.com/photo-1530863506128-dc9eb5c3e0fc?w=400&q=80'},
+    {id: 'demo-3', name: 'Ceramic Floor Tiles 60x60', category: 'tiles', price: 28000, unit: 'm²', stock: 1000, vendor: 'Tile Master', vendorEmail: 'demo@tilemaster.co.tz', vendorRegion: 'Arusha', rating: 4.7, reviews: 156, image: 'https://images.unsplash.com/photo-1523350165414-082d792c4bcc?w=400&q=80'},
+    {id: 'demo-4', name: 'Corrugated Iron Sheets 3m', category: 'roofing', price: 38000, unit: 'sheet', stock: 300, vendor: 'RoofTech', vendorEmail: 'demo@rooftech.co.tz', vendorRegion: 'Mwanza', rating: 4.6, reviews: 98, image: 'https://images.unsplash.com/photo-1673645652350-6a4c31c1c78f?w=400&q=80'},
+    {id: 'demo-5', name: 'Weather Guard Paint 20L', category: 'paint', price: 245000, unit: 'bucket', stock: 150, vendor: 'ColorWorld', vendorEmail: 'demo@colorworld.co.tz', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 201, image: 'https://images.unsplash.com/photo-1542238060-646c7ed65622?w=400&q=80'},
+    {id: 'demo-6', name: 'PVC Pipes 4 inch', category: 'plumbing', price: 28000, unit: 'piece', stock: 400, vendor: 'PipeLine', vendorEmail: 'demo@pipeline.co.tz', vendorRegion: 'Mbeya', rating: 4.5, reviews: 87, image: 'assets/pipes.svg'},
+    {id: 'demo-7', name: 'Concrete Blocks 6 inch', category: 'cement', price: 3200, unit: 'piece', stock: 2000, vendor: 'Simba Cement', vendorEmail: 'demo@simba.co.tz', vendorRegion: 'Dar es Salaam', rating: 4.7, reviews: 145, image: 'assets/cement.svg'},
+    {id: 'demo-8', name: 'Stainless Steel Pipes 2 inch', category: 'steel', price: 28000, unit: 'meter', stock: 500, vendor: 'Africa Steel', vendorEmail: 'demo@africasteel.co.tz', vendorRegion: 'Dar es Salaam', rating: 4.8, reviews: 92, image: 'assets/pipes.svg'},
+    {id: 'demo-9', name: 'Porcelain Wall Tiles 30x60', category: 'tiles', price: 24000, unit: 'm²', stock: 800, vendor: 'Tile Master', vendorEmail: 'demo@tilemaster.co.tz', vendorRegion: 'Arusha', rating: 4.6, reviews: 78, image: 'https://images.unsplash.com/photo-1551893478-d726eaf0442c?w=400&q=80'},
+    {id: 'demo-10', name: 'Clay Roof Tiles Red', category: 'roofing', price: 2200, unit: 'piece', stock: 1500, vendor: 'RoofTech', vendorEmail: 'demo@rooftech.co.tz', vendorRegion: 'Mwanza', rating: 4.5, reviews: 67, image: 'https://images.unsplash.com/photo-1518736346281-76873166a64a?w=400&q=80'},
+    {id: 'demo-11', name: 'Acrylic Emulsion Paint 10L', category: 'paint', price: 68000, unit: 'bucket', stock: 300, vendor: 'ColorWorld', vendorEmail: 'demo@colorworld.co.tz', vendorRegion: 'Dar es Salaam', rating: 4.7, reviews: 112, image: 'https://images.unsplash.com/photo-1525909002-1b05e0c869d8?w=400&q=80'},
+    {id: 'demo-12', name: 'HDPE Pipes 63mm', category: 'plumbing', price: 9500, unit: 'meter', stock: 1000, vendor: 'PipeLine', vendorEmail: 'demo@pipeline.co.tz', vendorRegion: 'Mbeya', rating: 4.6, reviews: 54, image: 'https://images.unsplash.com/photo-1729169927271-7826d8aae360?w=400&q=80'}
   ];
-  renderProducts();
-  renderCategories();
+  allVendors = [
+    {id: 'demo-v1', store_name: 'Simba Cement', region: 'Dar es Salaam', rating: 4.8, product_count: 2, photo: 'assets/cement.svg'},
+    {id: 'demo-v2', store_name: 'Africa Steel', region: 'Dar es Salaam', rating: 4.9, product_count: 2, photo: 'https://images.unsplash.com/photo-1530863506128-dc9eb5c3e0fc?w=200&q=70'},
+    {id: 'demo-v3', store_name: 'Tile Master', region: 'Arusha', rating: 4.7, product_count: 2, photo: 'https://images.unsplash.com/photo-1523350165414-082d792c4bcc?w=200&q=70'},
+    {id: 'demo-v4', store_name: 'RoofTech', region: 'Mwanza', rating: 4.6, product_count: 2, photo: 'https://images.unsplash.com/photo-1673645652350-6a4c31c1c78f?w=200&q=70'},
+    {id: 'demo-v5', store_name: 'ColorWorld', region: 'Dar es Salaam', rating: 4.8, product_count: 2, photo: 'https://images.unsplash.com/photo-1542238060-646c7ed65622?w=200&q=70'},
+    {id: 'demo-v6', store_name: 'PipeLine', region: 'Mbeya', rating: 4.5, product_count: 2, photo: 'assets/pipes.svg'}
+  ];
+  hydrateVendors();
+  renderStorefront();
 }
 
 function productImage(product) {
@@ -922,8 +1180,11 @@ function renderProducts() {
   if (activeFilters.category) {
     filtered = filtered.filter(p => String(p.category || '').toLowerCase() === activeFilters.category);
   }
+  if (activeFilters.vendor) {
+    filtered = filtered.filter(p => String(p.vendor || '').toLowerCase() === activeFilters.vendor.toLowerCase());
+  }
   if (query) {
-    filtered = filtered.filter(p => [p.name, p.vendor, p.category, p.vendorRegion, p.description]
+    filtered = filtered.filter(p => [p.name, p.vendor, categoryLabel(p.category), p.category, p.vendorRegion, p.description]
       .some(value => String(value || '').toLowerCase().includes(query)));
   }
 
@@ -932,15 +1193,19 @@ function renderProducts() {
     case 'price-desc': filtered.sort((a, b) => Number(b.price) - Number(a.price)); break;
     case 'rating': filtered.sort((a, b) => Number(b.rating) - Number(a.rating)); break;
     case 'newest': filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); break;
+    default:
+      filtered.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0) || Number(b.reviews || 0) - Number(a.reviews || 0));
   }
 
   updateProductsHeader(filtered.length);
 
   if (filtered.length === 0) {
-    const filtersActive = Boolean(activeFilters.search || activeFilters.category);
+    const filtersActive = Boolean(activeFilters.search || activeFilters.category || activeFilters.vendor);
     const label = activeFilters.search
       ? `“${esc(activeFilters.search)}”`
-      : 'this category';
+      : activeFilters.vendor
+        ? esc(activeFilters.vendor)
+        : 'this category';
     grid.innerHTML = `
       <div class="empty-state" role="listitem">
         <div class="empty-state-icon">${filtersActive ? '🔍' : '🏗️'}</div>
@@ -955,30 +1220,36 @@ function renderProducts() {
     return;
   }
 
-  grid.innerHTML = filtered.map(p => `
+  grid.innerHTML = filtered.map(p => {
+    const rating = Number(p.rating || 0);
+    const reviews = Number(p.reviews || 0);
+    const stock = Number(p.stock || 0);
+    return `
     <article class="card product-card" role="listitem" data-product-id="${esc(p.id)}" onclick="viewProduct(this.dataset.productId)">
       <div class="product-image">
         <img src="${productImage(p)}" alt="${esc(p.name)}" loading="lazy" width="400" height="300"
              onerror="this.onerror=null;this.src='assets/product-placeholder.svg'">
+        ${p.badge ? `<span class="product-badge">${esc(p.badge)}</span>` : ''}
       </div>
       <div class="product-body">
-        <div class="product-category"><span class="badge badge-info">${esc(p.category)}</span></div>
+        <div class="product-category"><span class="badge badge-info">${esc(categoryLabel(p.category))}</span></div>
         <h3 class="product-name">${esc(p.name)}</h3>
         <div class="product-meta">
-          <span class="product-vendor">🏪 ${esc(p.vendor)}</span>
-          <span class="product-location">📍 ${esc(p.vendorRegion)}</span>
+          <button type="button" class="product-vendor" data-vendor-name="${esc(p.vendor)}"
+            onclick="event.stopPropagation();viewVendorByName(this.dataset.vendorName)">🏪 ${esc(p.vendor)}</button>
+          <span class="product-location">📍 ${esc(p.vendorRegion || 'Tanzania')}</span>
         </div>
         <div class="product-rating">
-          <span class="rating">★ ${esc(p.rating == null ? '—' : p.rating)}</span>
-          <span class="reviews">(${esc(p.reviews == null ? 0 : p.reviews)} reviews)</span>
+          <span class="rating">${rating > 0 ? `★ ${rating.toFixed(1)}` : 'New'}</span>
+          <span class="reviews">(${reviews} review${reviews === 1 ? '' : 's'})</span>
         </div>
         <div class="product-footer">
           <span class="product-price">${formatPrice(p.price)} <span class="unit">/${esc(p.unit || 'unit')}</span></span>
-          <button class="btn btn-primary btn-sm" data-add-to-cart="${esc(p.id)}">Add to Cart</button>
+          <button class="btn btn-primary btn-sm" data-add-to-cart="${esc(p.id)}" ${stock <= 0 ? 'disabled' : ''}>${stock <= 0 ? 'Out of stock' : 'Add to Cart'}</button>
         </div>
       </div>
-    </article>
-  `).join('');
+    </article>`;
+  }).join('');
 }
 
 function renderCategories() {
@@ -1007,46 +1278,79 @@ function renderVendors() {
   const carousel = document.getElementById('vendorsCarousel');
   if (!carousel) return;
 
-  const vendors = [
-    {id: '1', name: 'Simba Cement', region: 'Dar es Salaam', rating: 4.9, products: 45, verified: true, image: 'assets/cement.svg'},
-    {id: '2', name: 'Africa Steel', region: 'Dar es Salaam', rating: 4.8, products: 32, verified: true, image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200&q=80'},
-    {id: '3', name: 'Tile Master', region: 'Arusha', rating: 4.7, products: 28, verified: true, image: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=200&q=80'},
-    {id: '4', name: 'RoofTech', region: 'Mwanza', rating: 4.6, products: 19, verified: true, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=80'},
-    {id: '5', name: 'ColorWorld', region: 'Dar es Salaam', rating: 4.8, products: 23, verified: true, image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=200&q=80'},
-    {id: '6', name: 'PipeLine', region: 'Mbeya', rating: 4.5, products: 15, verified: true, image: 'assets/pipes.svg'}
-  ];
+  const toggle = document.getElementById('vendorsToggle');
+  const vendors = [...allVendors].sort((a, b) =>
+    Number(b.rating || 0) - Number(a.rating || 0) ||
+    Number(b.product_count || 0) - Number(a.product_count || 0) ||
+    String(a.store_name || '').localeCompare(String(b.store_name || ''))
+  );
 
-  carousel.innerHTML = vendors.map(v => `
-    <article class="card vendor-card" role="listitem">
-      <div class="vendor-header">
-        <div class="vendor-avatar">
-          <img src="${safeUrl(v.image) || 'assets/product-placeholder.svg'}" alt="${esc(v.name)}" loading="lazy" width="56" height="56" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">
-        </div>
-        <div>
-          <h3>${esc(v.name)}</h3>
-          <div class="vendor-meta">
-            <span class="vendor-location">📍 ${esc(v.region)}</span>
-            <span class="badge badge-success">${esc(v.products)} products</span>
+  if (vendors.length === 0) {
+    carousel.innerHTML = `
+      <div class="empty-state" role="listitem">
+        <div class="empty-state-icon">🏪</div>
+        <h3>Verified vendors are onboarding</h3>
+        <p>New stores are being reviewed before they go live. Register your business to join the marketplace.</p>
+        <button class="btn btn-primary" onclick="openVendorRegistration()">Become a Vendor</button>
+      </div>`;
+    if (toggle) toggle.style.display = 'none';
+    return;
+  }
+
+  const visible = vendorsExpanded ? vendors : vendors.slice(0, 6);
+  carousel.innerHTML = visible.map(v => {
+    const rating = Number(v.rating || 0);
+    const products = Number(v.product_count || 0);
+    const photo = safeUrl(v.photo);
+    return `
+      <article class="card vendor-card" role="listitem">
+        <div class="vendor-header">
+          <div class="vendor-avatar">
+            ${photo
+              ? `<img src="${photo}" alt="${esc(v.store_name)}" loading="lazy" width="56" height="56">`
+              : `<span aria-hidden="true">${esc(initialsFor(v.store_name))}</span>`}
+          </div>
+          <div>
+            <h3>${esc(v.store_name)}</h3>
+            <div class="vendor-meta">
+              <span class="vendor-location">📍 ${esc(v.region || 'Tanzania')}</span>
+              <span class="badge badge-success">${products} product${products === 1 ? '' : 's'}</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="vendor-stats">
-        <div class="stat"><span class="stat-value">★ ${v.rating}</span><span class="stat-label">Rating</span></div>
-        <div class="stat"><span class="stat-value">${v.products}</span><span class="stat-label">Products</span></div>
-        <div class="stat"><span class="stat-value">${v.verified ? '✓' : '○'}</span><span class="stat-label">Verified</span></div>
-      </div>
-      <button class="btn btn-primary btn-sm btn-block" onclick="viewVendor('${v.id}')">View Products</button>
-    </article>
-  `).join('');
+        <div class="vendor-stats">
+          <div class="stat"><span class="stat-value">${rating > 0 ? `★ ${rating.toFixed(1)}` : 'New'}</span><span class="stat-label">Rating</span></div>
+          <div class="stat"><span class="stat-value">${products}</span><span class="stat-label">Products</span></div>
+          <div class="stat"><span class="stat-value">✓</span><span class="stat-label">Verified</span></div>
+        </div>
+        <button class="btn btn-primary btn-sm btn-block" ${products === 0 ? 'disabled' : ''}
+          onclick="viewVendor('${esc(v.id)}')">${products === 0 ? 'No products yet' : 'View Products'}</button>
+      </article>`;
+  }).join('');
+
+  if (toggle) {
+    if (vendors.length > 6) {
+      toggle.style.display = '';
+      toggle.textContent = vendorsExpanded ? 'Show fewer vendors' : `View all ${vendors.length} vendors`;
+    } else {
+      toggle.style.display = 'none';
+    }
+  }
+}
+
+function toggleVendorList() {
+  vendorsExpanded = !vendorsExpanded;
+  renderVendors();
 }
 
 function parseProductFilters() {
   const hash = location.hash.replace(/^#/, '');
-  if (!hash.startsWith('products')) return {search: '', category: ''};
+  if (!hash.startsWith('products')) return {search: '', category: '', vendor: ''};
   const params = new URLSearchParams(hash.split('?')[1] || '');
   return {
     search: (params.get('search') || '').trim(),
-    category: (params.get('category') || '').trim()
+    category: (params.get('category') || '').trim(),
+    vendor: (params.get('vendor') || '').trim()
   };
 }
 
@@ -1060,6 +1364,7 @@ function setProductFilters(filters) {
   const params = new URLSearchParams();
   if (filters.search) params.set('search', filters.search);
   if (filters.category) params.set('category', filters.category);
+  if (filters.vendor) params.set('vendor', filters.vendor);
   const hash = '#products' + (params.toString() ? '?' + params.toString() : '');
 
   history.pushState(null, '', hash);
@@ -1085,29 +1390,107 @@ function updateProductsHeader(count) {
   const subtitle = document.getElementById('productsSubtitle');
   if (!subtitle) return;
 
-  const parts = [];
-  if (activeFilters.category) {
-    const category = CATEGORIES.find(c => c.id === activeFilters.category);
-    parts.push(category ? category.name : activeFilters.category);
-  }
-  if (activeFilters.search) parts.push(`“${activeFilters.search}”`);
+  let text = `${count} product${count === 1 ? '' : 's'}`;
+  if (activeFilters.vendor) text += ` from ${activeFilters.vendor}`;
+  if (activeFilters.category) text += ` in ${categoryLabel(activeFilters.category)}`;
+  if (activeFilters.search) text += ` matching “${activeFilters.search}”`;
 
-  subtitle.textContent = parts.length
-    ? `${count} product${count === 1 ? '' : 's'} matching ${parts.join(' in ')}`
+  subtitle.textContent = (activeFilters.vendor || activeFilters.category || activeFilters.search)
+    ? text
     : 'Top-rated materials from verified vendors';
 }
 
 function addToCartById(productId) {
   const product = allProducts.find(p => String(p.id) === String(productId));
-  if (product) addToCart(product);
+  if (!product) return;
+  if (Number(product.stock) <= 0) {
+    showToast('This product is out of stock.', 'warning');
+    return;
+  }
+  addToCart(product);
 }
 
 function viewProduct(productId) {
-  showToast('Product detail view coming soon', 'info');
+  const product = allProducts.find(p => String(p.id) === String(productId));
+  if (!product) {
+    showToast('This product is no longer available.', 'warning');
+    return;
+  }
+
+  const content = document.getElementById('productContent');
+  if (!content) return;
+
+  const rating = Number(product.rating || 0);
+  const reviews = Number(product.reviews || 0);
+  const stock = Number(product.stock || 0);
+  const maxQuantity = Math.max(1, Math.min(stock, 999));
+  const description = product.description || `Quality ${categoryLabel(product.category).toLowerCase()} supplied by a verified JengaNasi vendor.`;
+
+  content.innerHTML = `
+    <div class="product-detail">
+      <div class="product-detail-image">
+        <img src="${productImage(product)}" alt="${esc(product.name)}"
+          onerror="this.onerror=null;this.src='assets/product-placeholder.svg'">
+        ${product.badge ? `<span class="product-badge">${esc(product.badge)}</span>` : ''}
+      </div>
+      <div class="product-detail-info">
+        <span class="badge badge-info">${esc(categoryLabel(product.category))}</span>
+        <h3>${esc(product.name)}</h3>
+        <div class="product-rating">
+          <span class="rating">${rating > 0 ? `★ ${rating.toFixed(1)}` : 'New'}</span>
+          <span class="reviews">${reviews} review${reviews === 1 ? '' : 's'}</span>
+        </div>
+        <div class="product-detail-price">${formatPrice(product.price)} <span>/ ${esc(product.unit || 'unit')}</span></div>
+        <p class="product-detail-stock ${stock <= 10 ? 'low' : ''}">${stock > 0 ? `${stock} in stock${stock <= 10 ? ' — low stock' : ''}` : 'Currently out of stock'}</p>
+        <p class="product-detail-description">${esc(description)}</p>
+        <button type="button" class="product-detail-vendor" onclick="viewVendorByName(this.dataset.vendorName)" data-vendor-name="${esc(product.vendor)}">
+          <span class="product-detail-vendor-label">Sold by</span>
+          <strong>${esc(product.vendor)}</strong>
+          <span>📍 ${esc(product.vendorRegion || 'Tanzania')}</span>
+        </button>
+        <div class="product-detail-buy">
+          <div class="quantity-control">
+            <label for="detailQty">Qty</label>
+            <input id="detailQty" type="number" min="1" max="${maxQuantity}" value="1" ${stock <= 0 ? 'disabled' : ''}>
+          </div>
+          <button class="btn btn-primary btn-lg" ${stock <= 0 ? 'disabled' : ''} onclick="addProductFromDetail('${esc(product.id)}')">
+            ${stock <= 0 ? 'Out of stock' : 'Add to Cart'}
+          </button>
+        </div>
+        <p class="product-detail-note">Delivery is arranged with the vendor after checkout.</p>
+      </div>
+    </div>`;
+
+  openModal('productModal');
+}
+
+function addProductFromDetail(productId) {
+  const product = allProducts.find(p => String(p.id) === String(productId));
+  if (!product) return;
+  const quantityInput = document.getElementById('detailQty');
+  const requested = Math.max(1, parseInt(quantityInput?.value, 10) || 1);
+  const stock = Number(product.stock || 0);
+  if (stock <= 0) {
+    showToast('This product is out of stock.', 'warning');
+    return;
+  }
+  addToCart(product, Math.min(requested, stock));
+  closeModal('productModal');
 }
 
 function viewVendor(vendorId) {
-  showToast('Vendor profile coming soon', 'info');
+  const vendor = allVendors.find(v => String(v.id) === String(vendorId));
+  if (!vendor) {
+    showToast('This vendor is not available.', 'warning');
+    return;
+  }
+  viewVendorByName(vendor.store_name);
+}
+
+function viewVendorByName(vendorName) {
+  if (!vendorName) return;
+  closeModal('productModal');
+  setProductFilters({vendor: vendorName});
 }
 
 function scrollToProducts() {
@@ -1409,7 +1792,7 @@ async function openCustomerDashboard() {
   const user = currentUser;
   const [orderCount, orders] = await Promise.all([
     countRows('orders', { customer_id: user.id }),
-    recentRows('orders', 'id, total, status, date', 'date', 5, { customer_id: user.id })
+    recentRows('orders', 'id, group_id, total, status, date', 'date', 5, { customer_id: user.id })
   ]);
 
   const content = document.getElementById('dashboardContent');
@@ -1417,7 +1800,9 @@ async function openCustomerDashboard() {
 
   const cartItems = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   const spend = orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
-  const badge = `<span class="badge-status ${user.verified ? 'approved' : 'pending'}">${user.verified ? 'Verified' : 'Verification pending'}</span>`;
+  const badge = user.suspended
+    ? '<span class="badge-status rejected">Suspended</span>'
+    : '<span class="badge-status approved">Customer</span>';
 
   content.innerHTML = `
     ${dashboardIdentity(user, user.phone ? `Phone: ${user.phone}` : '', badge)}
@@ -1432,7 +1817,7 @@ async function openCustomerDashboard() {
       <table class="dashboard-table">
         <thead><tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
         <tbody>${orders.map(order => `<tr>
-          <td>#${esc(String(order.id).slice(0, 8))}</td>
+          <td>#${esc(String(order.group_id || order.id))}</td>
           <td>${esc(formatDate(order.date))}</td>
           <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
           <td>${orderStatusBadge(order.status)}</td>
@@ -1445,6 +1830,12 @@ async function openCustomerDashboard() {
     </div>`;
 }
 
+function orderCustomerName(customer) {
+  if (!customer) return '';
+  if (typeof customer === 'string') return customer;
+  return customer.name || customer.email || '';
+}
+
 async function openVendorDashboard() {
   if (!currentUser) { openAuthModal('signin'); return; }
   openDashboardModal('Vendor Dashboard');
@@ -1452,12 +1843,13 @@ async function openVendorDashboard() {
   const user = currentUser;
   const email = user.vendorEmail || user.email;
   const [productCount, orderCount, products, orders] = await Promise.all([
-    countRows('products', { vendor_email: email }),
+    countRows('products', { vendor_email: email, deleted: false }),
     countRows('orders', { vendor_email: email }),
-    recentRows('products', 'id, name, price, stock, status, created_at', 'created_at', 5, { vendor_email: email }),
-    recentRows('orders', 'id, customer, total, status, date', 'date', 5, { vendor_email: email })
+    recentRows('products', 'id, name, price, stock, max_stock, status, deleted, image, unit, category, description, badge, variants, created_at', 'created_at', 50, { vendor_email: email, deleted: false }),
+    recentRows('orders', 'id, group_id, customer, total, status, date, customer_email', 'date', 10, { vendor_email: email })
   ]);
 
+  dashboardProducts = products;
   const content = document.getElementById('dashboardContent');
   if (!content) return;
 
@@ -1465,37 +1857,252 @@ async function openVendorDashboard() {
 
   content.innerHTML = `
     ${dashboardIdentity(user, [user.storeName, user.region, user.phone].filter(Boolean).join(' · '), badge)}
-    ${user.verified ? '' : '<div class="dashboard-note">Your store is awaiting verification. Our team reviews new vendor accounts before they go live.</div>'}
+    ${user.verified ? '' : '<div class="dashboard-note">Your store is awaiting verification. Products you add are saved as drafts until an administrator approves the store.</div>'}
+    <div class="dashboard-actions" style="margin-bottom:var(--space-lg)">
+      <button class="btn btn-primary" onclick="resetVendorProductForm();document.getElementById('vendorProductForm')?.scrollIntoView({behavior:'smooth',block:'center'})">+ Add product</button>
+      <button class="btn btn-outline" onclick="openVendorDashboard()">Refresh data</button>
+    </div>
     <div class="dashboard-stats">
       ${statCard('📦', 'Live products', productCount, 'primary')}
       ${statCard('🧾', 'Orders received', orderCount, 'info')}
       ${statCard('✅', 'Store status', user.verified ? 'Verified' : 'Pending', user.verified ? 'success' : 'warning')}
       ${statCard('📅', 'Joined', formatDate(user.joinedAt), 'warning')}
     </div>
-    <h3 class="dashboard-section-heading">Recent products</h3>
+    <h3 class="dashboard-section-heading">Your products</h3>
     ${products.length ? `<div class="dashboard-table-wrap">
       <table class="dashboard-table">
-        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th></tr></thead>
+        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>${products.map(product => `<tr>
           <td>${esc(product.name)}</td>
           <td class="dashboard-money">${formatPrice(Number(product.price) || 0)}</td>
           <td>${esc(product.stock == null ? '—' : product.stock)}</td>
           <td>${orderStatusBadge(product.status || 'active')}</td>
+          <td class="dashboard-row-actions">
+            <button class="btn btn-outline btn-sm" onclick="editVendorProduct('${esc(product.id)}')">Edit</button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteVendorProduct('${esc(product.id)}')">Remove</button>
+          </td>
         </tr>`).join('')}</tbody>
       </table>
-    </div>` : emptyTable('No products listed yet. Product management is coming next.')}
+    </div>` : emptyTable('No products yet. Add your first product below.')}
     <h3 class="dashboard-section-heading">Recent orders</h3>
     ${orders.length ? `<div class="dashboard-table-wrap">
       <table class="dashboard-table">
-        <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
-        <tbody>${orders.map(order => `<tr>
-          <td>#${esc(String(order.id).slice(0, 8))}</td>
-          <td>${esc(order.customer || '—')}</td>
-          <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
-          <td>${orderStatusBadge(order.status)}</td>
-        </tr>`).join('')}</tbody>
+        <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>${orders.map(order => {
+          const status = String(order.status || 'pending').toLowerCase();
+          const action = status === 'pending'
+            ? `<button class="btn btn-outline btn-sm" onclick="updateVendorOrderStatus('${esc(order.id)}', 'confirmed')">Confirm</button>`
+            : status === 'confirmed' || status === 'processing'
+              ? `<button class="btn btn-outline btn-sm" onclick="updateVendorOrderStatus('${esc(order.id)}', 'delivered')">Mark delivered</button>`
+              : '—';
+          return `<tr>
+            <td>#${esc(String(order.group_id || order.id))}</td>
+            <td>${esc(orderCustomerName(order.customer) || order.customer_email || '—')}</td>
+            <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
+            <td>${orderStatusBadge(order.status)}</td>
+            <td>${action}</td>
+          </tr>`;
+        }).join('')}</tbody>
       </table>
-    </div>` : emptyTable('No orders yet.')}`;
+    </div>` : emptyTable('No orders yet. Orders from customers will appear here.')}
+
+    <h3 class="dashboard-section-heading" id="productFormHeading">Add a product</h3>
+    <form class="dashboard-form" id="vendorProductForm" onsubmit="saveVendorProduct(event)">
+      <input type="hidden" name="productId" value="">
+      <div class="input-group dashboard-form-full">
+        <label for="productName">Product name</label>
+        <input id="productName" name="productName" required maxlength="120" placeholder="e.g. Twiga Cement 50kg">
+      </div>
+      <div class="input-group">
+        <label for="productCategory">Category</label>
+        <select id="productCategory" name="productCategory" required>
+          <option value="">Select category</option>
+          ${CATEGORIES.map(category => `<option value="${esc(category.id)}">${esc(category.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="productUnit">Unit</label>
+        <input id="productUnit" name="productUnit" required maxlength="20" placeholder="bag, piece, m²">
+      </div>
+      <div class="input-group">
+        <label for="productPrice">Price (TZS)</label>
+        <input id="productPrice" name="productPrice" type="number" min="100" step="100" required placeholder="18500">
+      </div>
+      <div class="input-group">
+        <label for="productStock">Stock available</label>
+        <input id="productStock" name="productStock" type="number" min="0" step="1" required placeholder="100">
+      </div>
+      <div class="input-group dashboard-form-full">
+        <label for="productDescription">Description</label>
+        <textarea id="productDescription" name="productDescription" rows="3" required maxlength="500" placeholder="What is included, size, grade, and delivery notes"></textarea>
+      </div>
+      <div class="input-group dashboard-form-full">
+        <label for="productImage">Image URL</label>
+        <input id="productImage" name="productImage" type="url" maxlength="500" placeholder="https://images.unsplash.com/photo-...">
+      </div>
+      <div class="dashboard-form-actions dashboard-form-full">
+        <button type="submit" class="btn btn-primary">Save product</button>
+        <button type="button" class="btn btn-outline" onclick="resetVendorProductForm()">Clear</button>
+      </div>
+    </form>`;
+}
+
+function editVendorProduct(productId) {
+  const product = dashboardProducts.find(item => String(item.id) === String(productId));
+  const form = document.getElementById('vendorProductForm');
+  if (!product || !form) return;
+
+  const setValue = (name, value) => {
+    const field = form.elements.namedItem(name);
+    if (field) field.value = value == null ? '' : value;
+  };
+  setValue('productId', product.id);
+  setValue('productName', product.name);
+  setValue('productCategory', product.category);
+  setValue('productUnit', product.unit);
+  setValue('productPrice', product.price);
+  setValue('productStock', product.stock);
+  setValue('productDescription', product.description);
+  setValue('productImage', product.image);
+
+  const heading = document.getElementById('productFormHeading');
+  if (heading) heading.textContent = `Edit ${product.name}`;
+  form.scrollIntoView({behavior: 'smooth', block: 'center'});
+  form.elements.namedItem('productName')?.focus({preventScroll: true});
+}
+
+function resetVendorProductForm() {
+  const form = document.getElementById('vendorProductForm');
+  if (!form) return;
+  form.reset();
+  const heading = document.getElementById('productFormHeading');
+  if (heading) heading.textContent = 'Add a product';
+}
+
+async function saveVendorProduct(event) {
+  event.preventDefault();
+  if (!currentUser || currentUser.role !== 'vendor') {
+    showToast('Vendor access required.', 'danger');
+    return;
+  }
+
+  const form = event.target;
+  const read = name => String(form.elements.namedItem(name)?.value || '').trim();
+  const productId = read('productId');
+  const name = read('productName');
+  const category = read('productCategory');
+  const unit = read('productUnit');
+  const description = read('productDescription');
+  const price = Number(read('productPrice'));
+  const stock = Number.parseInt(read('productStock'), 10);
+  const image = safeUrl(read('productImage')) || 'assets/product-placeholder.svg';
+  const email = currentUser.vendorEmail || currentUser.email;
+
+  if (!name || !category || !unit || !description) {
+    showToast('Please complete the product name, category, unit, and description.', 'warning');
+    return;
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    showToast('Enter a valid product price.', 'warning');
+    return;
+  }
+  if (!Number.isInteger(stock) || stock < 0) {
+    showToast('Enter a valid stock quantity.', 'warning');
+    return;
+  }
+
+  const existing = productId ? dashboardProducts.find(item => String(item.id) === String(productId)) : null;
+  const payload = {
+    name,
+    category,
+    unit,
+    price,
+    stock,
+    max_stock: Math.max(stock, Number(existing?.max_stock || 0), 1),
+    description,
+    image,
+    badge: existing?.badge || '',
+    variants: existing?.variants || []
+  };
+
+  showLoading('Saving product...');
+  try {
+    if (productId) {
+      const {error} = await _supabase.from('products').update(payload)
+        .eq('id', productId).eq('vendor_email', email);
+      if (error) throw error;
+      showToast('Product updated.', 'success');
+    } else {
+      const {error} = await _supabase.from('products').insert({
+        ...payload,
+        vendor_email: email,
+        vendor: currentUser.storeName || currentUser.name || 'Verified vendor',
+        status: currentUser.verified ? 'active' : 'draft',
+        rating: 0,
+        reviews: 0,
+        deleted: false
+      });
+      if (error) throw error;
+      showToast(currentUser.verified ? 'Product published.' : 'Product saved as a draft.', 'success');
+    }
+
+    resetVendorProductForm();
+    await loadProducts();
+    await openVendorDashboard();
+  } catch (error) {
+    showToast('Could not save product: ' + (error.message || 'Unknown error'), 'danger', 6000);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function deleteVendorProduct(productId) {
+  if (!currentUser || currentUser.role !== 'vendor') {
+    showToast('Vendor access required.', 'danger');
+    return;
+  }
+  const product = dashboardProducts.find(item => String(item.id) === String(productId));
+  if (!product) return;
+  if (!confirm(`Remove "${product.name}" from your store?`)) return;
+
+  showLoading('Removing product...');
+  try {
+    const {error} = await _supabase.from('products')
+      .update({deleted: true, status: 'inactive'})
+      .eq('id', productId)
+      .eq('vendor_email', currentUser.vendorEmail || currentUser.email);
+    if (error) throw error;
+    showToast('Product removed.', 'success');
+    await loadProducts();
+    await openVendorDashboard();
+  } catch (error) {
+    showToast('Could not remove product: ' + (error.message || 'Unknown error'), 'danger');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function updateVendorOrderStatus(orderId, status) {
+  if (!currentUser || currentUser.role !== 'vendor') {
+    showToast('Vendor access required.', 'danger');
+    return;
+  }
+  if (!['confirmed', 'processing', 'delivered', 'cancelled'].includes(status)) return;
+
+  showLoading('Updating order...');
+  try {
+    const {error} = await _supabase.from('orders')
+      .update({status})
+      .eq('id', orderId)
+      .eq('vendor_email', currentUser.vendorEmail || currentUser.email);
+    if (error) throw error;
+    showToast(`Order marked ${status}.`, 'success');
+    await openVendorDashboard();
+  } catch (error) {
+    showToast('Could not update order: ' + (error.message || 'Unknown error'), 'danger');
+  } finally {
+    hideLoading();
+  }
 }
 
 async function openAdminDashboard() {
@@ -1563,7 +2170,7 @@ async function openAdminDashboard() {
         <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
         <tbody>${orders.map(order => `<tr>
           <td>#${esc(String(order.id).slice(0, 8))}</td>
-          <td>${esc(order.customer || '—')}</td>
+          <td>${esc(orderCustomerName(order.customer) || '—')}</td>
           <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
           <td>${orderStatusBadge(order.status)}</td>
           <td>${esc(formatDate(order.date))}</td>
@@ -1687,7 +2294,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadProducts();
-  renderVendors();
   populateRegionSelects();
 
   window.addEventListener('hashchange', applyProductFilters);

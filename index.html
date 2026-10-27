@@ -138,10 +138,10 @@
         <div class="hero-content">
           <div class="hero-badge">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>Trusted by 10,000+ builders across Tanzania</span>
+            <span id="heroBadgeText">Verified suppliers across Tanzania</span>
           </div>
           <h1 id="hero-title" class="hero-title">Build Better with <span class="hero-accent">JengaNasi</span></h1>
-          <p class="hero-subtitle">Tanzania's premier marketplace for construction materials. Compare prices, order from verified vendors, and get materials delivered to your site.</p>
+          <p class="hero-subtitle">Compare real prices from verified Tanzanian suppliers, order construction materials, and arrange delivery to your site.</p>
           <div class="hero-search" role="search">
             <div class="search-input-wrapper">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -150,20 +150,14 @@
             <button class="btn btn-primary btn-lg" id="heroSearchBtn">Search</button>
           </div>
           <div class="hero-stats">
-            <div class="stat"><span class="stat-value" id="statVendors">500+</span><span class="stat-label">Verified Vendors</span></div>
-            <div class="stat"><span class="stat-value" id="statProducts">10,000+</span><span class="stat-label">Products Listed</span></div>
-            <div class="stat"><span class="stat-value" id="statOrders">50,000+</span><span class="stat-label">Orders Delivered</span></div>
-            <div class="stat"><span class="stat-value" id="statRegions">25</span><span class="stat-label">Regions Covered</span></div>
+            <div class="stat"><span class="stat-value" id="statVendors">—</span><span class="stat-label">Verified Vendors</span></div>
+            <div class="stat"><span class="stat-value" id="statProducts">—</span><span class="stat-label">Products Listed</span></div>
+            <div class="stat"><span class="stat-value" id="statCategories">12</span><span class="stat-label">Categories</span></div>
+            <div class="stat"><span class="stat-value" id="statRegions">—</span><span class="stat-label">Regions Covered</span></div>
           </div>
-          <div class="hero-trust" aria-label="Trusted by leading companies">
-            <span class="hero-trust-label">Trusted by</span>
-            <div class="hero-trust-logos" aria-hidden="true">
-              <span class="trust-logo">Simba Cement</span>
-              <span class="trust-logo">Africa Steel</span>
-              <span class="trust-logo">Tile Master</span>
-              <span class="trust-logo">RoofTech</span>
-              <span class="trust-logo">ColorWorld</span>
-            </div>
+          <div class="hero-trust" id="heroTrust" aria-label="Featured vendors">
+            <span class="hero-trust-label">Featured vendors</span>
+            <div class="hero-trust-logos" id="heroTrustLogos" aria-hidden="true"></div>
           </div>
         </div>
       </div>
@@ -208,7 +202,7 @@
           <p class="section-subtitle">Trusted suppliers across Tanzania</p>
         </header>
         <div class="vendors-carousel" id="vendorsCarousel" role="list"></div>
-        <a href="#vendors" class="btn btn-ghost">View All Vendors</a>
+        <button type="button" class="btn btn-ghost" id="vendorsToggle" onclick="toggleVendorList()">View all vendors</button>
       </div>
     </section>
 
@@ -224,21 +218,21 @@
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </div>
             <h3>Search & Compare</h3>
-            <p>Browse thousands of products from verified vendors. Filter by category, price, location, and rating.</p>
+            <p>Browse the catalogue by category, compare prices and stock, and check ratings from verified vendors.</p>
           </article>
           <article class="step-card">
             <div class="step-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </div>
             <h3>Place Your Order</h3>
-            <p>Add to cart, choose delivery options, and pay securely via M-Pesa, card, or bank transfer.</p>
+            <p>Add materials to your cart, confirm your delivery details, and place one order per vendor. Pay on delivery.</p>
           </article>
           <article class="step-card">
             <div class="step-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/><path d="M19 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10"/></svg>
             </div>
-            <h3>Track Delivery</h3>
-            <p>Real-time tracking from vendor to your site. Get notifications at every step.</p>
+            <h3>Receive Delivery</h3>
+            <p>Follow your order in your account and coordinate the delivery window directly with your vendor.</p>
           </article>
         </div>
       </div>
@@ -249,7 +243,7 @@
         <div class="cta-card">
           <div class="cta-content">
             <h2 id="cta-title">Ready to Start Your Project?</h2>
-            <p>Join thousands of builders who trust JengaNasi for their construction materials.</p>
+            <p>Join builders across Tanzania buying materials from verified local suppliers.</p>
             <div class="cta-actions">
               <button class="btn btn-primary btn-lg" onclick="openAuthModal();switchAuthTab('register')">Create Free Account</button>
               <button class="btn btn-outline btn-lg" onclick="openVendorRegistration()">Become a Vendor</button>
@@ -503,9 +497,17 @@
     </div>
   </div>
 
+  <!-- Product Detail Modal -->
+  <div class="modal-overlay" id="productModal" role="dialog" aria-modal="true" aria-labelledby="productTitle">
+    <div class="modal-box product-modal-box">
+      <header class="modal-header"><h2 class="modal-title" id="productTitle">Product details</h2><button class="modal-close" onclick="closeModal('productModal')" aria-label="Close product details"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header>
+      <div class="modal-body" id="productContent"></div>
+    </div>
+  </div>
+
   <!-- Checkout Modal -->
   <div class="modal-overlay" id="checkoutModal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
-    <div class="modal-box" style="max-width:520px"><header class="modal-header"><h2 class="modal-title" id="checkoutTitle">Checkout</h2><button class="modal-close" onclick="closeModal('checkoutModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body" id="checkoutContent"></div></div>
+    <div class="modal-box" style="max-width:600px"><header class="modal-header"><h2 class="modal-title" id="checkoutTitle">Checkout</h2><button class="modal-close" onclick="closeModal('checkoutModal')" aria-label="Close checkout"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body" id="checkoutContent"></div></div>
   </div>
 
   <!-- Toast Container -->
