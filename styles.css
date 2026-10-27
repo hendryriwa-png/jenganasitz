@@ -1728,6 +1728,44 @@ section[id], footer[id] {
 .action-btn.edit { color: var(--amber-dark); background: var(--amber-light); }
 .action-btn.edit:hover { background: var(--amber); color: var(--slate-900); }
 
+/* Dashboard modal */
+.dashboard-modal-box { max-width: 940px; }
+.dashboard-hero {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: var(--space-md); margin-bottom: var(--space-lg);
+  background: var(--slate-50); border: 1px solid var(--slate-100);
+  border-radius: var(--r-lg); flex-wrap: wrap;
+}
+.dashboard-avatar {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--amber); color: var(--slate-900);
+  font-size: var(--text-lg); font-weight: 800;
+}
+.dashboard-hero h3 { font-size: var(--text-lg); font-weight: 800; color: var(--slate-900); }
+.dashboard-hero p { font-size: var(--text-sm); color: var(--slate-500); overflow-wrap: anywhere; }
+.dashboard-hero .badge-status { margin-left: auto; }
+.dashboard-section-heading {
+  font-size: var(--text-base); font-weight: 800; color: var(--slate-900);
+  margin: var(--space-lg) 0 var(--space-sm);
+}
+.dashboard-money { font-weight: 700; color: var(--slate-900); white-space: nowrap; }
+.dashboard-table-wrap { overflow-x: auto; border-radius: var(--r-lg); }
+.dashboard-table { min-width: 520px; }
+.dashboard-empty {
+  padding: var(--space-xl); text-align: center; color: var(--slate-500);
+  background: var(--white); border: 1px dashed var(--slate-200);
+  border-radius: var(--r-lg); font-size: var(--text-sm);
+}
+.dashboard-note {
+  padding: var(--space-md); margin-bottom: var(--space-lg);
+  border-radius: var(--r-md); background: var(--amber-light);
+  color: var(--amber-text); font-size: var(--text-sm);
+}
+.dashboard-loading { padding: var(--space-2xl); text-align: center; color: var(--slate-500); }
+.dashboard-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+.dashboard-actions .btn { min-height: 40px; }
+
 /* ========================================
    FORM SECTIONS
    ======================================== */
@@ -1750,4 +1788,4 @@ section[id], footer[id] {
   .hero-search, .hero-stats, .section-actions, .cta-actions,
   .footer-links, .footer-contact { display: none !important; }
   body { background: var(--white); color: var(--slate-900); }
-  .hero,
+}

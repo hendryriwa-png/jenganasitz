@@ -2,12 +2,39 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const TOKEN = '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';
-const REPO_OWNER = 'hendryriwa-png';
-const REPO_NAME = 'jenganasi-tanzania';
+const TOKEN = process.env.GH_PAT || process.env.GITHUB_TOKEN;
+const REPO_OWNER = process.env.REPO_OWNER || 'hendryriwa-png';
+const REPO_NAME = process.env.REPO_NAME || 'jenganasitz';
+
+if (!TOKEN) {
+  console.error('Error: GH_PAT or GITHUB_TOKEN environment variable is required');
+  process.exit(1);
+}
 
 async function githubApi(endpoint, method = 'GET', data = null) {
   return new Promise((resolve, reject) => {
+    const doRequest = (options) => {
+      const req = https.request(options, (res) => {
+        if ((res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) && res.headers.location) {
+          const redirectUrl = res.headers.location;
+          const url = new URL(redirectUrl);
+          const redirectOptions = {
+            hostname: url.hostname,
+            path: url.pathname + url.search,
+            method: method,
+            headers: options.headers
+          };
+          doRequest(redirectOptions);
+          return;
+        }
+        handleResponse(res, resolve, reject);
+      });
+
+      req.on('error', reject);
+      if (data) req.write(JSON.stringify(data));
+      req.end();
+    };
+
     const options = {
       hostname: 'api.github.com',
       path: `/repos/${REPO_OWNER}/${REPO_NAME}${endpoint}`,
@@ -20,7 +47,7 @@ async function githubApi(endpoint, method = 'GET', data = null) {
       }
     };
 
-    const req = https.request(options, (res) => {
+    function handleResponse(res, resolve, reject) {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
@@ -30,11 +57,9 @@ async function githubApi(endpoint, method = 'GET', data = null) {
           reject(new Error(`${method} ${endpoint}: ${res.statusCode} - ${body}`));
         }
       });
-    });
+    }
 
-    req.on('error', reject);
-    if (data) req.write(JSON.stringify(data));
-    req.end();
+    doRequest(options);
   });
 }
 
@@ -82,7 +107,20 @@ async function deploy() {
     'index.html',
     'legal.html',
     'manifest.json',
-    'sw.js'
+    'sw.js',
+    'package.json',
+    'vercel.json',
+    '.htmlhintrc',
+    '.github/workflows/ci.yml',
+    '.github/workflows/deploy-vercel.yml',
+    '.github/workflows/deploy-supabase.yml',
+    '.github/workflows/deploy-pages.yml',
+    'supabase/config.toml',
+    'supabase/functions/vendor-dashboard/index.ts',
+    'supabase/functions/place-order/index.ts',
+    'supabase/functions/sign-up/index.ts',
+    'supabase/functions/sign-in/index.ts',
+    'supabase/functions/notify-login/index.ts'
   ];
   
   for (const file of files) {

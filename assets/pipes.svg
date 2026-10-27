@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" role="img" aria-label="Pipes illustration">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <circle cx="200" cy="140" r="78" fill="#e0f2fe"/>
+  <g fill="none" stroke="#0284c7" stroke-width="16" stroke-linecap="round">
+    <path d="M150 100h60a20 20 0 0 1 20 20v60"/>
+    <path d="M190 190h60a20 20 0 0 0 20-20v-30"/>
+  </g>
+  <circle cx="150" cy="100" r="12" fill="#0369a1"/>
+  <circle cx="270" cy="140" r="12" fill="#0369a1"/>
+  <text x="200" y="248" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#334155">Pipes &amp; Plumbing</text>
+</svg>

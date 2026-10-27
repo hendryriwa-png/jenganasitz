@@ -229,18 +229,18 @@ function hideLoading() {
 
 // ============ SESSION MANAGEMENT ============
 function saveSession(user) {
-  sessionStorage.setItem('jenganasi_user', JSON.stringify(user));
   currentUser = user;
+  try { sessionStorage.setItem('jenganasi_user', JSON.stringify(user)); } catch { }
 }
 
 function loadSession() {
-  const stored = sessionStorage.getItem('jenganasi_user');
-  if (stored) {
-    try {
+  try {
+    const stored = sessionStorage.getItem('jenganasi_user');
+    if (stored) {
       currentUser = JSON.parse(stored);
       updateAuthUI();
-    } catch { }
-  }
+    }
+  } catch { }
 }
 
 function clearSession() {
@@ -249,15 +249,127 @@ function clearSession() {
   updateAuthUI();
 }
 
-async function getUserProfile(userId) {
-  try {
-    const { data, error } = await _supabase.from('users').select('*').eq('id', userId).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
-  } catch (e) {
-    console.warn('getUserProfile failed:', e);
+async function fetchProfileRow(table, userId) {
+  const { data, error } = await _supabase.from(table).select('*').eq('id', userId).maybeSingle();
+  if (error) {
+    if (error.code !== 'PGRST116') console.warn(`Profile lookup failed (${table}):`, error.message);
     return null;
   }
+  return data;
+}
+
+function profileFromRow(role, row, user) {
+  const meta = user?.user_metadata || {};
+  const profile = {
+    id: user?.id || row.id,
+    email: row.email || user?.email || '',
+    name: row.name || meta.name || (user?.email ? user.email.split('@')[0] : 'Account'),
+    role,
+    verified: row.verified !== false,
+    suspended: Boolean(row.suspended),
+    joinedAt: row.joined_at || null,
+    persisted: Boolean(row.id)
+  };
+  if (role === 'vendor') {
+    profile.vendorEmail = row.email || user?.email || '';
+    profile.storeName = row.store_name || meta.storeName || profile.name;
+    profile.phone = row.phone || meta.phone || '';
+    profile.region = row.region || meta.region || '';
+    profile.vendorType = row.vendor_type || meta.vendorType || '';
+  } else if (role === 'customer') {
+    profile.phone = row.phone || meta.phone || '';
+  }
+  return profile;
+}
+
+function profilePayloadFor(user, role) {
+  const meta = user.user_metadata || {};
+  const email = user.email || '';
+  const name = (meta.name || email.split('@')[0] || 'Account').trim();
+  if (role === 'vendor') {
+    const lat = Number(meta.lat);
+    const lng = Number(meta.lng);
+    return {
+      id: user.id,
+      email,
+      name,
+      phone: meta.phone || null,
+      store_name: meta.storeName || name,
+      brela: meta.brela || null,
+      licence: meta.licence || null,
+      national_id: meta.nationalId || null,
+      tin: meta.tin || null,
+      bank_account: meta.bankAccount || null,
+      photo: meta.photo || null,
+      region: meta.region || null,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+      vendor_type: meta.vendorType || null,
+      role: 'vendor'
+    };
+  }
+  return {
+    id: user.id,
+    email,
+    name,
+    phone: meta.phone || '',
+    national_id: meta.nationalId || null,
+    tin: meta.tin || null,
+    payment_account: meta.paymentAccount || null,
+    role: 'customer'
+  };
+}
+
+async function createProfileIfMissing(user, role) {
+  const table = role === 'vendor' ? 'vendors' : 'customers';
+  const { error } = await _supabase.from(table).insert(profilePayloadFor(user, role));
+  if (error && error.code !== '23505') {
+    console.warn(`Could not create ${table} profile:`, error.message);
+    return null;
+  }
+  return fetchProfileRow(table, user.id);
+}
+
+async function resolveUserProfile(user, { createIfMissing = true } = {}) {
+  if (!user) return null;
+
+  const admin = await fetchProfileRow('admins', user.id);
+  if (admin || user.app_metadata?.role === 'admin') {
+    return profileFromRow('admin', admin || { email: user.email, name: user.user_metadata?.name }, user);
+  }
+
+  const vendor = await fetchProfileRow('vendors', user.id);
+  if (vendor) return profileFromRow('vendor', vendor, user);
+
+  const customer = await fetchProfileRow('customers', user.id);
+  if (customer) return profileFromRow('customer', customer, user);
+
+  if (!createIfMissing) return null;
+  const role = user.user_metadata?.role === 'vendor' ? 'vendor' : 'customer';
+  const created = await createProfileIfMissing(user, role);
+  return profileFromRow(role, created || { email: user.email }, user);
+}
+
+async function restoreSession() {
+  try {
+    const { data, error } = await _supabase.auth.getSession();
+    if (error) throw error;
+    if (!data?.session) { clearSession(); return; }
+    const profile = await resolveUserProfile(data.session.user, { createIfMissing: true });
+    if (profile) { saveSession(profile); updateAuthUI(); }
+  } catch (e) {
+    console.warn('Session restore failed:', e.message);
+  }
+}
+
+function friendlyAuthError(error) {
+  const message = error?.message || '';
+  if (/Invalid login credentials/i.test(message)) return 'Invalid email or password. Please try again.';
+  if (/Email not confirmed/i.test(message)) return 'Please confirm your email address before signing in.';
+  if (/User already registered/i.test(message)) return 'An account with this email already exists. Sign in instead.';
+  if (/Password should be at least/i.test(message)) return 'Password must be at least 8 characters.';
+  if (/rate limit|too many requests/i.test(message)) return 'Too many attempts. Please wait a minute and try again.';
+  return message || 'Something went wrong. Please try again.';
 }
 
 function updateAuthUI() {
@@ -274,6 +386,8 @@ function updateAuthUI() {
     if (vendorBtn) vendorBtn.style.display = 'none';
     if (userMenu) userMenu.style.display = 'flex';
     if (userNameEl) userNameEl.textContent = (currentUser.name || 'Account').split(' ')[0];
+    const dashBtn = document.getElementById('userDashboardBtn');
+    if (dashBtn) dashBtn.textContent = currentUser.role === 'admin' ? 'Admin Console' : 'My Dashboard';
     if (mobileAuthBtn) {
       mobileAuthBtn.textContent = 'My Account';
       mobileAuthBtn.onclick = openAccountDashboard;
@@ -296,7 +410,10 @@ function updateAuthUI() {
 }
 
 function openAccountDashboard() {
-  if (currentUser?.role === 'vendor') openVendorDashboard();
+  if (!currentUser) { openAuthModal('signin'); return; }
+  if (currentUser.suspended) { showToast('This account is suspended. Please contact support.', 'danger'); return; }
+  if (currentUser.role === 'admin') openAdminDashboard();
+  else if (currentUser.role === 'vendor') openVendorDashboard();
   else openCustomerDashboard();
 }
 
@@ -308,6 +425,7 @@ async function signOutUser() {
   }
   sessionStorage.removeItem('sb_session');
   clearSession();
+  closeModal('dashboardModal');
   closeMobileMenu();
   showToast('Signed out', 'info');
 }
@@ -332,12 +450,16 @@ function resetAuthFlow() {
   regDocData = {};
   vendorUploadedImage = null;
   updateAuthStepsUI();
-  document.querySelectorAll('.auth-step').forEach(s => s.style.display = 'none');
+  // Only reset the step containers. The customer/vendor/sign-in forms are
+  // nested inside these containers and share the .auth-step class, so hiding
+  // every .auth-step would also hide the form that is about to be shown.
+  ['authStep1', 'authStep2', 'authStep2Vendor', 'authStep3', 'signinForm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('customerForm').style.display = 'block';
+  document.getElementById('vendorForm').style.display = 'block';
   document.getElementById('authStep1').style.display = 'block';
-  document.getElementById('authStep2').style.display = 'none';
-  document.getElementById('authStep2Vendor').style.display = 'none';
-  document.getElementById('authStep3').style.display = 'none';
-  document.getElementById('signinForm').style.display = 'none';
   document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('roleCustomer').classList.add('selected');
   selectedAuthRole = 'customer';
@@ -811,7 +933,7 @@ function renderProducts() {
       ? `“${esc(activeFilters.search)}”`
       : 'this category';
     grid.innerHTML = `
-      <div class="empty-state">
+      <div class="empty-state" role="listitem">
         <div class="empty-state-icon">${filtersActive ? '🔍' : '🏗️'}</div>
         <h3>${filtersActive ? 'No products match your search' : 'No products listed yet'}</h3>
         <p>${filtersActive
@@ -994,32 +1116,21 @@ async function handleSignIn(e) {
   showLoading('Signing in...');
   try {
     const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      // Check if it's a "user not found" or "invalid credentials" - expected for new users
-      if (error.message.includes('Invalid login credentials') || error.message.includes('User not found')) {
-        showToast('Invalid email or password. Or create an account first.', 'danger');
-      } else {
-        throw error;
-      }
-      return;
-    }
-    const session = data.session;
+    if (error) throw new Error(friendlyAuthError(error));
+
     const user = data.user;
-    if (session) sessionStorage.setItem('sb_session', JSON.stringify(session));
-    const profile = await getUserProfile(user.id);
-    if (profile) {
-      currentUser = { name: profile.name, email: user.email, role: profile.role, vendorEmail: profile.role === 'vendor' ? user.email : null };
-    } else {
-      currentUser = { name: user.user_metadata?.name || user.email.split('@')[0], email: user.email, role: user.app_metadata?.role || 'customer', vendorEmail: user.app_metadata?.role === 'vendor' ? user.email : null };
-    }
+    if (!user) throw new Error('Sign in failed. Please try again.');
+
+    const profile = await resolveUserProfile(user, { createIfMissing: true });
+    if (!profile) throw new Error('We could not load your account profile. Please contact support.');
+
+    currentUser = profile;
     closeModal('authModal');
     saveSession(currentUser);
     updateAuthUI();
     form.reset();
-    showToast('Welcome back, ' + currentUser.name.split(' ')[0] + '!');
-    if (currentUser.role === 'vendor') openVendorDashboard();
-    else if (currentUser.role === 'customer') openCustomerDashboard();
-    else { const last = getLastSection(); if (last !== 'home') navigateToSection(last); }
+    showToast('Welcome back, ' + (currentUser.name || 'there').split(' ')[0] + '!');
+    openAccountDashboard();
     renderProducts();
     renderCategoryChips();
     initPush();
@@ -1049,19 +1160,25 @@ async function handleCustomerRegister(e) {
         options: {
           data: {
             name, role: 'customer', phone,
-            nationalId: form.nationalId?.value?.trim(),
-            tin: form.tin?.value?.trim(),
-            paymentAccount: form.paymentAccount?.value?.trim()
+            nationalId: form.nationalId?.value?.trim() || null,
+            tin: form.tin?.value?.trim() || null,
+            paymentAccount: form.paymentAccount?.value?.trim() || null
           }
         }
       });
-      if (authError) throw new Error(authError.message);
-      if (authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
-      const userId = authData.user.id;
-      const customerData = { id: userId, email, name, role: 'customer', phone, nationalId: form.nationalId?.value?.trim(), tin: form.tin?.value?.trim(), paymentAccount: form.paymentAccount?.value?.trim() };
-      const { error: profileError } = await _supabase.from('customers').insert(customerData);
-      if (profileError) console.warn('Profile creation failed:', profileError.message);
-      currentUser = { name, email, role: 'customer' };
+      if (authError) throw new Error(friendlyAuthError(authError));
+      if (!authData.session) {
+        closeModal('authModal');
+        openModal('authModal');
+        switchAuthTab('signin');
+        showToast('Account created. Check your email to confirm, then sign in.', 'success', 8000);
+        return;
+      }
+      const profile = await resolveUserProfile(authData.user, { createIfMissing: true });
+      if (!profile || !profile.persisted) {
+        throw new Error('Your account was created, but your profile could not be saved. Please contact support.');
+      }
+      currentUser = profile;
     }
     closeModal('authModal');
     saveSession(currentUser);
@@ -1105,6 +1222,7 @@ async function handleVendorRegister(e) {
         options: {
           data: {
             name, role: 'vendor', storeName, phone,
+            vendorType: selectedVendorType || null,
             brela: form.brela?.value?.trim() || null,
             licence: form.licence?.value?.trim() || null,
             nationalId: form.vendorNationalId?.value?.trim() || null,
@@ -1117,16 +1235,19 @@ async function handleVendorRegister(e) {
           }
         }
       });
-      if (authError) throw new Error(authError.message);
-      if (authData.session) sessionStorage.setItem('sb_session', JSON.stringify(authData.session));
-      const userId = authData.user.id;
-      const vendorData = { id: userId, email, name, role: 'vendor', storeName, phone, brela: form.brela?.value?.trim() || null, licence: form.licence?.value?.trim() || null, nationalId: form.vendorNationalId?.value?.trim() || null, tin: form.vendorTin?.value?.trim() || null, bankAccount: form.vendorBank?.value?.trim() || null, photo: vendorUploadedImage || null, region: form.region?.value?.trim() || null, lat: form.vendorLat?.value ? parseFloat(form.vendorLat.value) || null : null, lng: form.vendorLng?.value ? parseFloat(form.vendorLng.value) || null : null };
-      const { error: profileError } = await _supabase.from('vendors').insert(vendorData);
-      if (profileError) {
-        console.warn('Vendor profile creation failed:', profileError.message);
-        showToast('Account created. Our team will finish verifying your vendor profile.', 'warning');
+      if (authError) throw new Error(friendlyAuthError(authError));
+      if (!authData.session) {
+        closeModal('authModal');
+        openModal('authModal');
+        switchAuthTab('signin');
+        showToast('Vendor account created. Check your email to confirm, then sign in.', 'success', 8000);
+        return;
       }
-      currentUser = { name: storeName, email, role: 'vendor', vendorEmail: email };
+      const profile = await resolveUserProfile(authData.user, { createIfMissing: true });
+      if (!profile || !profile.persisted) {
+        throw new Error('Your account was created, but your vendor profile could not be saved. Please contact support.');
+      }
+      currentUser = profile;
     }
     closeModal('authModal');
     saveSession(currentUser);
@@ -1168,20 +1289,11 @@ async function handleResetPassword(e) {
   const confirm = form.confirm.value;
   if (!password || !confirm) { showToast('Please fill in all fields', 'danger'); return; }
   if (password !== confirm) { showToast('Passwords do not match', 'danger'); return; }
-  if (password.length < 6) { showToast('Password must be at least 6 characters', 'danger'); return; }
+  if (password.length < 8) { showToast('Password must be at least 8 characters', 'danger'); return; }
   showLoading('Updating password...');
   try {
     const { error } = await _supabase.auth.updateUser({ password: password });
     if (error) throw error;
-    const email = form.dataset.email;
-    if (email) {
-      const hashed = await hashPasswordV2(password);
-      if (customerAccounts?.some(c => c.email === email)) {
-        await sbUpdate('customers', { email }, { password: hashed });
-      } else if (vendorAccounts?.some(v => v.email === email)) {
-        await sbUpdate('vendors', { email }, { password: hashed });
-      }
-    }
     showToast('Password updated successfully! Please sign in with your new password.', 'success');
     closeModal('resetPasswordModal');
     openModal('authModal');
@@ -1211,12 +1323,263 @@ function initPush() {
 }
 
 // ============ DASHBOARDS ============
-function openVendorDashboard() {
-  showToast('Vendor dashboard coming soon', 'info');
+function initialsFor(name) {
+  return String(name || '?').trim().split(/\s+/).slice(0, 2)
+    .map(part => part.charAt(0)).join('').toUpperCase() || '?';
 }
 
-function openCustomerDashboard() {
-  showToast('Customer dashboard coming soon', 'info');
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function orderStatusBadge(status) {
+  const raw = String(status || 'pending').toLowerCase();
+  let tone = 'pending';
+  if (['approved', 'completed', 'delivered', 'paid'].includes(raw)) tone = 'approved';
+  else if (['rejected', 'cancelled', 'canceled', 'failed'].includes(raw)) tone = 'rejected';
+  else if (['active', 'processing', 'shipped', 'in_progress'].includes(raw)) tone = 'active';
+  return `<span class="badge-status ${tone}">${esc(raw)}</span>`;
+}
+
+function statCard(icon, label, value, tone = 'primary') {
+  return `<div class="stat-card ${tone}">
+    <div class="stat-icon" aria-hidden="true">${icon}</div>
+    <div class="stat-info"><h4>${esc(label)}</h4><div class="stat-value">${esc(String(value))}</div></div>
+  </div>`;
+}
+
+function emptyTable(text) {
+  return `<div class="dashboard-empty">${esc(text)}</div>`;
+}
+
+function dashboardIdentity(user, subtitle = '', badge = '') {
+  return `<div class="dashboard-hero">
+    <div class="dashboard-avatar" aria-hidden="true">${esc(initialsFor(user.name))}</div>
+    <div>
+      <h3>${esc(user.name || 'Account')}</h3>
+      <p>${esc(user.email || '')}</p>
+      ${subtitle ? `<p>${esc(subtitle)}</p>` : ''}
+    </div>
+    ${badge}
+  </div>`;
+}
+
+function openDashboardModal(title) {
+  const titleEl = document.getElementById('dashboardTitle');
+  const content = document.getElementById('dashboardContent');
+  if (!titleEl || !content) { showToast('Dashboard is unavailable right now.', 'danger'); return; }
+  titleEl.textContent = title;
+  content.innerHTML = '<div class="dashboard-loading">Loading your dashboard…</div>';
+  openModal('dashboardModal');
+}
+
+async function countRows(table, filters = {}) {
+  let query = _supabase.from(table).select('id', { count: 'exact', head: true });
+  Object.entries(filters).forEach(([column, value]) => { query = query.eq(column, value); });
+  const { count, error } = await query;
+  if (error) { console.warn(`Count failed (${table}):`, error.message); return '—'; }
+  return count ?? 0;
+}
+
+async function recentRows(table, columns, orderColumn, limit = 5, filters = {}) {
+  let query = _supabase.from(table).select(columns);
+  Object.entries(filters).forEach(([column, value]) => { query = query.eq(column, value); });
+  const { data, error } = await query.order(orderColumn, { ascending: false }).limit(limit);
+  if (error) { console.warn(`Recent rows failed (${table}):`, error.message); return []; }
+  return data || [];
+}
+
+async function openCustomerDashboard() {
+  if (!currentUser) { openAuthModal('signin'); return; }
+  openDashboardModal('My Account');
+
+  const user = currentUser;
+  const [orderCount, orders] = await Promise.all([
+    countRows('orders', { customer_id: user.id }),
+    recentRows('orders', 'id, total, status, date', 'date', 5, { customer_id: user.id })
+  ]);
+
+  const content = document.getElementById('dashboardContent');
+  if (!content) return;
+
+  const cartItems = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const spend = orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
+  const badge = `<span class="badge-status ${user.verified ? 'approved' : 'pending'}">${user.verified ? 'Verified' : 'Verification pending'}</span>`;
+
+  content.innerHTML = `
+    ${dashboardIdentity(user, user.phone ? `Phone: ${user.phone}` : '', badge)}
+    <div class="dashboard-stats">
+      ${statCard('🛒', 'Items in cart', cartItems, 'primary')}
+      ${statCard('📦', 'Your orders', orderCount, 'info')}
+      ${statCard('💰', 'Recent order value', formatPrice(spend), 'success')}
+      ${statCard('📅', 'Member since', formatDate(user.joinedAt), 'warning')}
+    </div>
+    <h3 class="dashboard-section-heading">Recent orders</h3>
+    ${orders.length ? `<div class="dashboard-table-wrap">
+      <table class="dashboard-table">
+        <thead><tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>${orders.map(order => `<tr>
+          <td>#${esc(String(order.id).slice(0, 8))}</td>
+          <td>${esc(formatDate(order.date))}</td>
+          <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
+          <td>${orderStatusBadge(order.status)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyTable('You have not placed an order yet.')}
+    <div class="dashboard-actions" style="margin-top:var(--space-lg)">
+      <button class="btn btn-primary" onclick="closeModal('dashboardModal');scrollToProducts()">Browse products</button>
+      <button class="btn btn-outline" onclick="closeModal('dashboardModal');openLocationModal()">Change location</button>
+    </div>`;
+}
+
+async function openVendorDashboard() {
+  if (!currentUser) { openAuthModal('signin'); return; }
+  openDashboardModal('Vendor Dashboard');
+
+  const user = currentUser;
+  const email = user.vendorEmail || user.email;
+  const [productCount, orderCount, products, orders] = await Promise.all([
+    countRows('products', { vendor_email: email }),
+    countRows('orders', { vendor_email: email }),
+    recentRows('products', 'id, name, price, stock, status, created_at', 'created_at', 5, { vendor_email: email }),
+    recentRows('orders', 'id, customer, total, status, date', 'date', 5, { vendor_email: email })
+  ]);
+
+  const content = document.getElementById('dashboardContent');
+  if (!content) return;
+
+  const badge = `<span class="badge-status ${user.verified ? 'approved' : 'pending'}">${user.verified ? 'Verified' : 'Pending review'}</span>`;
+
+  content.innerHTML = `
+    ${dashboardIdentity(user, [user.storeName, user.region, user.phone].filter(Boolean).join(' · '), badge)}
+    ${user.verified ? '' : '<div class="dashboard-note">Your store is awaiting verification. Our team reviews new vendor accounts before they go live.</div>'}
+    <div class="dashboard-stats">
+      ${statCard('📦', 'Live products', productCount, 'primary')}
+      ${statCard('🧾', 'Orders received', orderCount, 'info')}
+      ${statCard('✅', 'Store status', user.verified ? 'Verified' : 'Pending', user.verified ? 'success' : 'warning')}
+      ${statCard('📅', 'Joined', formatDate(user.joinedAt), 'warning')}
+    </div>
+    <h3 class="dashboard-section-heading">Recent products</h3>
+    ${products.length ? `<div class="dashboard-table-wrap">
+      <table class="dashboard-table">
+        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th></tr></thead>
+        <tbody>${products.map(product => `<tr>
+          <td>${esc(product.name)}</td>
+          <td class="dashboard-money">${formatPrice(Number(product.price) || 0)}</td>
+          <td>${esc(product.stock == null ? '—' : product.stock)}</td>
+          <td>${orderStatusBadge(product.status || 'active')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyTable('No products listed yet. Product management is coming next.')}
+    <h3 class="dashboard-section-heading">Recent orders</h3>
+    ${orders.length ? `<div class="dashboard-table-wrap">
+      <table class="dashboard-table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>${orders.map(order => `<tr>
+          <td>#${esc(String(order.id).slice(0, 8))}</td>
+          <td>${esc(order.customer || '—')}</td>
+          <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
+          <td>${orderStatusBadge(order.status)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyTable('No orders yet.')}`;
+}
+
+async function openAdminDashboard() {
+  if (!currentUser || currentUser.role !== 'admin') {
+    showToast('Admin access required.', 'danger');
+    return;
+  }
+  openDashboardModal('Admin Console');
+
+  const [customerCount, vendorCount, productCount, orderCount, pendingCount, customers, vendors, orders] = await Promise.all([
+    countRows('customers'),
+    countRows('vendors'),
+    countRows('products'),
+    countRows('orders'),
+    countRows('vendors', { verified: false }),
+    recentRows('customers', 'id, name, email, phone, verified, joined_at', 'joined_at', 5),
+    recentRows('vendors', 'id, store_name, name, email, region, verified, joined_at', 'joined_at', 5),
+    recentRows('orders', 'id, customer, total, status, date', 'date', 5)
+  ]);
+
+  const content = document.getElementById('dashboardContent');
+  if (!content) return;
+
+  content.innerHTML = `
+    ${dashboardIdentity(currentUser, 'Marketplace administrator', '<span class="badge-status approved">Admin</span>')}
+    ${Number(pendingCount) > 0 ? `<div class="dashboard-note">${esc(pendingCount)} vendor${pendingCount === 1 ? '' : 's'} awaiting verification.</div>` : ''}
+    <div class="dashboard-stats">
+      ${statCard('👥', 'Customers', customerCount, 'primary')}
+      ${statCard('🏪', 'Vendors', vendorCount, 'success')}
+      ${statCard('📦', 'Products', productCount, 'info')}
+      ${statCard('🧾', 'Orders', orderCount, 'warning')}
+    </div>
+
+    <h3 class="dashboard-section-heading">Newest customers</h3>
+    ${customers.length ? `<div class="dashboard-table-wrap">
+      <table class="dashboard-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Status</th></tr></thead>
+        <tbody>${customers.map(customer => `<tr>
+          <td>${esc(customer.name)}</td>
+          <td>${esc(customer.email)}</td>
+          <td>${esc(customer.phone || '—')}</td>
+          <td>${esc(formatDate(customer.joined_at))}</td>
+          <td><span class="badge-status ${customer.verified ? 'approved' : 'pending'}">${customer.verified ? 'Verified' : 'Pending'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyTable('No customers yet.')}
+
+    <h3 class="dashboard-section-heading">Newest vendors</h3>
+    ${vendors.length ? `<div class="dashboard-table-wrap">
+      <table class="dashboard-table">
+        <thead><tr><th>Store</th><th>Contact</th><th>Region</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>${vendors.map(vendor => `<tr>
+          <td>${esc(vendor.store_name || vendor.name)}</td>
+          <td>${esc(vendor.email)}</td>
+          <td>${esc(vendor.region || '—')}</td>
+          <td><span class="badge-status ${vendor.verified ? 'approved' : 'pending'}">${vendor.verified ? 'Verified' : 'Pending'}</span></td>
+          <td><button type="button" class="btn btn-outline btn-sm" onclick="adminSetVendorVerified('${esc(vendor.id)}', ${vendor.verified ? 'false' : 'true'})">${vendor.verified ? 'Unverify' : 'Verify'}</button></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyTable('No vendors yet.')}
+
+    <h3 class="dashboard-section-heading">Recent orders</h3>
+    ${orders.length ? `<div class="dashboard-table-wrap">
+      <table class="dashboard-table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${orders.map(order => `<tr>
+          <td>#${esc(String(order.id).slice(0, 8))}</td>
+          <td>${esc(order.customer || '—')}</td>
+          <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
+          <td>${orderStatusBadge(order.status)}</td>
+          <td>${esc(formatDate(order.date))}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyTable('No orders yet.')}
+    <div class="dashboard-actions" style="margin-top:var(--space-lg)">
+      <button class="btn btn-outline" onclick="openAdminDashboard()">Refresh data</button>
+    </div>`;
+}
+
+async function adminSetVendorVerified(vendorId, verified) {
+  if (!currentUser || currentUser.role !== 'admin') {
+    showToast('Admin access required.', 'danger');
+    return;
+  }
+  showLoading(verified ? 'Verifying vendor...' : 'Updating vendor...');
+  try {
+    const { error } = await _supabase.from('vendors').update({ verified }).eq('id', vendorId);
+    if (error) throw error;
+    showToast(verified ? 'Vendor verified.' : 'Vendor verification removed.', 'success');
+    await openAdminDashboard();
+  } catch (error) {
+    showToast('Could not update vendor: ' + (error.message || 'Unknown error'), 'danger');
+  } finally { hideLoading(); }
 }
 
 // ============ SEARCH & SORT ============
@@ -1305,6 +1668,15 @@ document.addEventListener('DOMContentLoaded', () => {
   activeFilters = parseProductFilters();
   loadSession();
   updateAuthUI();
+  restoreSession();
+
+  _supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && currentUser) {
+      clearSession();
+      closeModal('dashboardModal');
+    }
+  });
+
   loadProducts();
   renderVendors();
   populateRegionSelects();
