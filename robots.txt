@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
 
+# Account dashboards are private workspaces, not public pages.
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /vendor
+Disallow: /vendor.html
+Disallow: /customer
+Disallow: /customer.html
+
 Sitemap: https://jenganasitz.vercel.app/sitemap.xml
