@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a1221">
+  <title>My Account · JengaNasi</title>
+  <meta name="description" content="JengaNasi customer account for order tracking, delivery details, and contact preferences.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://wpspoxilxzdjbjdzzici.supabase.co">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body data-dashboard-role="customer">
+  <a class="skip-link" href="#dashboardMain">Skip to main content</a>
+
+  <div class="gate-root" id="gateRoot"></div>
+
+  <div class="app-shell" id="appShell" hidden>
+    <aside class="sidebar" id="sidebar" aria-label="Customer account navigation">
+      <div class="sidebar-head">
+        <a class="brand" href="/" aria-label="JengaNasi home">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9v5H3zM3 16h9v2H3zM16 6h5v2h-5zM16 13h5v5h-5z"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+          <span class="brand-word">Jenga<span>Nasi</span></span>
+        </a>
+        <button type="button" class="sidebar-close" data-action="close-sidebar" aria-label="Close navigation">&times;</button>
+      </div>
+
+      <div class="workspace-chip"><span data-workspace-label>Customer account</span></div>
+
+      <nav class="sidebar-nav" aria-label="Account sections">
+        <span class="nav-section-label">My account</span>
+        <a class="nav-item active" href="#overview" data-view="overview" data-title="Overview">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+          <span class="nav-label">Overview</span>
+        </a>
+        <a class="nav-item" href="#orders" data-view="orders" data-title="My orders">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+          <span class="nav-label">My orders</span>
+          <span class="nav-badge is-quiet" data-count="open-customer-orders" hidden>0</span>
+        </a>
+        <a class="nav-item" href="#profile" data-view="profile" data-title="Contact details">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span class="nav-label">Contact details</span>
+        </a>
+
+        <span class="nav-section-label">Marketplace</span>
+        <a class="nav-item" href="/">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-4.5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9h18"/></svg></span>
+          <span class="nav-label">Browse materials</span>
+        </a>
+        <a class="nav-item" href="/admin">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          <span class="nav-label">Admin console</span>
+        </a>
+        <a class="nav-item" href="/vendor">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-4.5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9h18"/></svg></span>
+          <span class="nav-label">Vendor dashboard</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span class="avatar" data-user-initials aria-hidden="true">C</span>
+          <div class="sidebar-user-copy">
+            <strong data-user-name>Customer</strong>
+            <span data-user-role>Customer</span>
+          </div>
+        </div>
+        <div class="sidebar-links">
+          <button type="button" class="sidebar-link" data-action="signout">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign out
+          </button>
+        </div>
+        <div class="workspace-switcher">
+          <span>Workspaces</span>
+          <a href="/admin">Admin</a>
+          <a href="/vendor">Vendor</a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop" data-action="close-sidebar" hidden></div>
+
+    <div class="dashboard-main">
+      <header class="topbar">
+        <button type="button" class="icon-btn menu-toggle" data-action="toggle-sidebar" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topbar-left">
+          <div class="topbar-title">
+            <span class="topbar-eyebrow" data-role-label>My Account</span>
+            <h1 data-page-title>Overview</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span class="topbar-date" id="todayLabel"></span>
+          <a class="btn btn-primary btn-sm" href="/">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-4.5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9h18"/></svg>
+            <span>Shop materials</span>
+          </a>
+          <div class="topbar-user" title="Signed-in customer">
+            <span class="avatar avatar-sm" data-user-initials aria-hidden="true">C</span>
+            <div class="topbar-user-copy">
+              <strong data-user-name>Customer</strong>
+              <span data-user-email></span>
+            </div>
+          </div>
+          <button type="button" class="icon-btn" data-action="signout" aria-label="Sign out" title="Sign out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="dashboard-content" id="dashboardMain" tabindex="-1">
+        <section class="view active" data-view-panel="overview" id="view-overview" aria-labelledby="customer-overview-title">
+          <div class="welcome-card">
+            <div class="welcome-copy">
+              <span class="welcome-eyebrow"><span class="dot" aria-hidden="true"></span> Your JengaNasi account</span>
+              <h2 id="customer-overview-title">Good <span data-daypart>morning</span>, <span data-user-first-name>there</span>.</h2>
+              <p>Follow every delivery from confirmed to completed, review what you ordered, and keep your contact number current for drivers.</p>
+              <div class="welcome-actions">
+                <a class="btn btn-primary" href="#orders">Track my orders</a>
+                <a class="btn btn-ghost-on-dark" href="/">Shop materials</a>
+              </div>
+            </div>
+            <div class="welcome-aside" aria-label="Orders placed">
+              <span>Orders placed</span>
+              <strong id="heroOrderCount">—</strong>
+              <small id="heroOrderCountLabel">loading orders…</small>
+            </div>
+          </div>
+
+          <div class="stat-grid" id="customerStats" aria-live="polite">
+            <div class="stat-card"><div class="stat-icon">…</div><div class="stat-copy"><span class="stat-label">Loading</span><strong class="stat-value">—</strong></div></div>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel" aria-labelledby="recent-customer-orders-title">
+              <div class="panel-head">
+                <div>
+                  <h3 id="recent-customer-orders-title">Recent orders</h3>
+                  <p>Your latest purchases across all vendors</p>
+                </div>
+                <a class="text-link" href="#orders">All orders</a>
+              </div>
+              <div class="panel-body" id="recentCustomerOrders" aria-live="polite"></div>
+            </section>
+
+            <div class="stack">
+              <section class="panel" aria-labelledby="account-summary-title">
+                <div class="panel-head">
+                  <div>
+                    <h3 id="account-summary-title">Account summary</h3>
+                    <p>Your buyer profile</p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="profile-card">
+                    <span class="avatar avatar-lg" data-user-initials aria-hidden="true">C</span>
+                    <div class="profile-card-copy">
+                      <h3 data-user-name>Customer</h3>
+                      <p data-user-email></p>
+                    </div>
+                  </div>
+                  <div class="profile-rows">
+                    <div class="profile-row"><span>Phone</span><span data-user-phone>Not added</span></div>
+                    <div class="profile-row"><span>Account type</span><span>Buyer</span></div>
+                    <div class="profile-row"><span>Joined</span><span data-user-joined>—</span></div>
+                  </div>
+                  <div class="form-actions mt-md">
+                    <a class="btn btn-outline btn-sm" href="#profile">Edit contact details</a>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel" aria-labelledby="last-delivery-title">
+                <div class="panel-head">
+                  <div>
+                    <h3 id="last-delivery-title">Last delivery</h3>
+                    <p>Where your most recent order is going</p>
+                  </div>
+                </div>
+                <div class="panel-body" id="lastDelivery" aria-live="polite"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view-panel="orders" id="view-orders" aria-labelledby="customer-orders-title">
+          <div class="view-head">
+            <div>
+              <span class="eyebrow">Purchase history</span>
+              <h2 id="customer-orders-title">My orders</h2>
+              <p>Each checkout may include several vendors. Open an order to follow every shipment and its delivery details.</p>
+            </div>
+            <div class="view-head-actions">
+              <button type="button" class="btn btn-outline" data-action="refresh-customer">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <section class="panel" aria-label="Order history">
+            <div class="toolbar">
+              <div class="search-field">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="search" id="customerOrderSearch" placeholder="Search order number, product, or vendor…" aria-label="Search your orders" autocomplete="off">
+              </div>
+              <select class="select-field" id="customerOrderStatusFilter" aria-label="Filter orders by status">
+                <option value="all">All orders</option>
+                <option value="open">In progress</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="processing">Processing</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <span class="toolbar-count" id="customerOrderCount">—</span>
+            </div>
+            <div class="panel-body" id="customerOrdersList" aria-live="polite"></div>
+          </section>
+        </section>
+
+        <section class="view" data-view-panel="profile" id="view-profile" aria-labelledby="customer-profile-title">
+          <div class="view-head">
+            <div>
+              <span class="eyebrow">Contact details</span>
+              <h2 id="customer-profile-title">Your details</h2>
+              <p>Drivers use this number to reach you on delivery day. Keep it up to date.</p>
+            </div>
+          </div>
+
+          <div class="profile-grid">
+            <section class="panel" aria-labelledby="contact-form-title">
+              <div class="panel-head">
+                <div>
+                  <h3 id="contact-form-title">Contact information</h3>
+                  <p>Used on new orders and delivery updates</p>
+                </div>
+              </div>
+              <div class="panel-body">
+                <form id="customerProfileForm" class="form-grid" novalidate>
+                  <div class="field field-full">
+                    <label for="customerName">Full name</label>
+                    <input id="customerName" name="customerName" type="text" maxlength="90" autocomplete="name" required>
+                  </div>
+                  <div class="field">
+                    <label for="customerPhone">Phone number</label>
+                    <input id="customerPhone" name="customerPhone" type="tel" maxlength="40" autocomplete="tel" placeholder="+255 754 123 456">
+                    <span class="field-hint">Tanzanian mobile number preferred.</span>
+                  </div>
+                  <div class="field">
+                    <label for="customerEmail">Email address</label>
+                    <input id="customerEmail" name="customerEmail" type="email" readonly aria-readonly="true">
+                    <span class="field-hint">Contact support to change your sign-in email.</span>
+                  </div>
+                  <div class="form-actions field-full">
+                    <button type="submit" class="btn btn-primary" id="saveCustomerBtn">Save changes</button>
+                    <button type="button" class="btn btn-outline" id="resetCustomerBtn">Reset</button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            <div class="stack">
+              <section class="panel" aria-labelledby="customer-security-title">
+                <div class="panel-head">
+                  <div>
+                    <h3 id="customer-security-title">Account &amp; security</h3>
+                    <p>Sign-in and support</p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="profile-rows">
+                    <div class="profile-row"><span>Sign-in email</span><strong data-user-email></strong></div>
+                    <div class="profile-row"><span>Member since</span><span data-user-joined>—</span></div>
+                    <div class="profile-row"><span>Account status</span><span>Active</span></div>
+                  </div>
+                  <div class="settings-note">
+                    <span aria-hidden="true">i</span>
+                    <span>Password changes and email updates are handled securely. If you need help with your account, contact JengaNasi support.</span>
+                  </div>
+                  <div class="form-actions mt-md">
+                    <a class="btn btn-outline btn-sm" href="mailto:info@jenganasi.co.tz?subject=Account%20help">Contact support</a>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel" aria-labelledby="customer-help-title">
+                <div class="panel-head">
+                  <div>
+                    <h3 id="customer-help-title">Need something built?</h3>
+                    <p>Browse verified suppliers across Tanzania</p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <p class="field-hint">Compare materials from verified vendors, then check out with delivery to your site.</p>
+                  <div class="form-actions mt-md">
+                    <a class="btn btn-primary" href="/">Shop materials</a>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="dashboard-footer">
+        <span>&copy; <span data-current-year>2026</span> JengaNasi Tanzania. All rights reserved.</span>
+        <div class="dashboard-footer-links">
+          <a href="/">Marketplace</a>
+          <a href="/vendor">Vendor dashboard</a>
+          <a href="/admin">Admin console</a>
+          <a href="mailto:info@jenganasi.co.tz">Support</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <noscript>
+    <div style="position:fixed;inset:0;z-index:900;display:grid;place-items:center;padding:24px;background:#0a1221;color:#fff;text-align:center">
+      <div><h1 style="margin-bottom:8px">JavaScript is required</h1><p style="color:#94a3b8">The JengaNasi customer account needs JavaScript enabled to sign you in securely.</p></div>
+    </div>
+  </noscript>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="dashboard-core.js"></script>
+  <script src="customer.js"></script>
+</body>
+</html>

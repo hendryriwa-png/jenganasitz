@@ -1,0 +1,9 @@
+/* Admin Console — gold workspace accent */
+:root {
+  --accent: #f59e0b;
+  --accent-rgb: 245, 158, 11;
+  --accent-strong: #d97706;
+  --accent-soft: #fff7e6;
+  --accent-text: #b45309;
+  --accent-contrast: #0f172a;
+}

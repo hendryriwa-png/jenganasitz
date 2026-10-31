@@ -1,0 +1,9 @@
+/* Vendor Dashboard — emerald workspace accent */
+:root {
+  --accent: #10b981;
+  --accent-rgb: 16, 185, 129;
+  --accent-strong: #047857;
+  --accent-soft: #ecfdf5;
+  --accent-text: #047857;
+  --accent-contrast: #ffffff;
+}

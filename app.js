@@ -55,7 +55,6 @@ let supabaseAvailable = true;
 let regDocData = {};
 let vendorUploadedImage = null;
 let vendorsExpanded = false;
-let dashboardProducts = [];
 
 // ============ UTILITY FUNCTIONS ============
 function formatPrice(amount) {
@@ -403,7 +402,13 @@ function updateAuthUI() {
     if (userMenu) userMenu.style.display = 'flex';
     if (userNameEl) userNameEl.textContent = (currentUser.name || 'Account').split(' ')[0];
     const dashBtn = document.getElementById('userDashboardBtn');
-    if (dashBtn) dashBtn.textContent = currentUser.role === 'admin' ? 'Admin Console' : 'My Dashboard';
+    if (dashBtn) {
+      dashBtn.textContent = currentUser.role === 'admin'
+        ? 'Admin Console'
+        : currentUser.role === 'vendor'
+          ? 'Vendor Dashboard'
+          : 'My Account';
+    }
     if (mobileAuthBtn) {
       mobileAuthBtn.textContent = 'My Account';
       mobileAuthBtn.onclick = openAccountDashboard;
@@ -428,9 +433,12 @@ function updateAuthUI() {
 function openAccountDashboard() {
   if (!currentUser) { openAuthModal('signin'); return; }
   if (currentUser.suspended) { showToast('This account is suspended. Please contact support.', 'danger'); return; }
-  if (currentUser.role === 'admin') openAdminDashboard();
-  else if (currentUser.role === 'vendor') openVendorDashboard();
-  else openCustomerDashboard();
+  const destination = currentUser.role === 'admin'
+    ? '/admin'
+    : currentUser.role === 'vendor'
+      ? '/vendor'
+      : '/customer';
+  window.location.href = destination;
 }
 
 async function signOutUser() {
@@ -441,7 +449,6 @@ async function signOutUser() {
   }
   sessionStorage.removeItem('sb_session');
   clearSession();
-  closeModal('dashboardModal');
   closeMobileMenu();
   showToast('Signed out', 'info');
 }
@@ -1714,488 +1721,24 @@ function initPush() {
   // placeholder
 }
 
-// ============ DASHBOARDS ============
+// ============ DASHBOARD NAVIGATION ============
+// The admin, vendor, and customer dashboards are dedicated pages. The main
+// storefront only links to them; access is re-verified on each page.
 function initialsFor(name) {
   return String(name || '?').trim().split(/\s+/).slice(0, 2)
     .map(part => part.charAt(0)).join('').toUpperCase() || '?';
 }
 
-function formatDate(value) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? '—'
-    : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+function openCustomerDashboard() {
+  window.location.href = '/customer';
 }
 
-function orderStatusBadge(status) {
-  const raw = String(status || 'pending').toLowerCase();
-  let tone = 'pending';
-  if (['approved', 'completed', 'delivered', 'paid'].includes(raw)) tone = 'approved';
-  else if (['rejected', 'cancelled', 'canceled', 'failed'].includes(raw)) tone = 'rejected';
-  else if (['active', 'processing', 'shipped', 'in_progress'].includes(raw)) tone = 'active';
-  return `<span class="badge-status ${tone}">${esc(raw)}</span>`;
+function openVendorDashboard() {
+  window.location.href = '/vendor';
 }
 
-function statCard(icon, label, value, tone = 'primary') {
-  return `<div class="stat-card ${tone}">
-    <div class="stat-icon" aria-hidden="true">${icon}</div>
-    <div class="stat-info"><h4>${esc(label)}</h4><div class="stat-value">${esc(String(value))}</div></div>
-  </div>`;
-}
-
-function emptyTable(text) {
-  return `<div class="dashboard-empty">${esc(text)}</div>`;
-}
-
-function dashboardIdentity(user, subtitle = '', badge = '') {
-  return `<div class="dashboard-hero">
-    <div class="dashboard-avatar" aria-hidden="true">${esc(initialsFor(user.name))}</div>
-    <div>
-      <h3>${esc(user.name || 'Account')}</h3>
-      <p>${esc(user.email || '')}</p>
-      ${subtitle ? `<p>${esc(subtitle)}</p>` : ''}
-    </div>
-    ${badge}
-  </div>`;
-}
-
-function openDashboardModal(title) {
-  const titleEl = document.getElementById('dashboardTitle');
-  const content = document.getElementById('dashboardContent');
-  if (!titleEl || !content) { showToast('Dashboard is unavailable right now.', 'danger'); return; }
-  titleEl.textContent = title;
-  content.innerHTML = '<div class="dashboard-loading">Loading your dashboard…</div>';
-  openModal('dashboardModal');
-}
-
-async function countRows(table, filters = {}) {
-  let query = _supabase.from(table).select('id', { count: 'exact', head: true });
-  Object.entries(filters).forEach(([column, value]) => { query = query.eq(column, value); });
-  const { count, error } = await query;
-  if (error) { console.warn(`Count failed (${table}):`, error.message); return '—'; }
-  return count ?? 0;
-}
-
-async function recentRows(table, columns, orderColumn, limit = 5, filters = {}) {
-  let query = _supabase.from(table).select(columns);
-  Object.entries(filters).forEach(([column, value]) => { query = query.eq(column, value); });
-  const { data, error } = await query.order(orderColumn, { ascending: false }).limit(limit);
-  if (error) { console.warn(`Recent rows failed (${table}):`, error.message); return []; }
-  return data || [];
-}
-
-async function openCustomerDashboard() {
-  if (!currentUser) { openAuthModal('signin'); return; }
-  openDashboardModal('My Account');
-
-  const user = currentUser;
-  const [orderCount, orders] = await Promise.all([
-    countRows('orders', { customer_id: user.id }),
-    recentRows('orders', 'id, group_id, total, status, date', 'date', 5, { customer_id: user.id })
-  ]);
-
-  const content = document.getElementById('dashboardContent');
-  if (!content) return;
-
-  const cartItems = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-  const spend = orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
-  const badge = user.suspended
-    ? '<span class="badge-status rejected">Suspended</span>'
-    : '<span class="badge-status approved">Customer</span>';
-
-  content.innerHTML = `
-    ${dashboardIdentity(user, user.phone ? `Phone: ${user.phone}` : '', badge)}
-    <div class="dashboard-stats">
-      ${statCard('🛒', 'Items in cart', cartItems, 'primary')}
-      ${statCard('📦', 'Your orders', orderCount, 'info')}
-      ${statCard('💰', 'Recent order value', formatPrice(spend), 'success')}
-      ${statCard('📅', 'Member since', formatDate(user.joinedAt), 'warning')}
-    </div>
-    <h3 class="dashboard-section-heading">Recent orders</h3>
-    ${orders.length ? `<div class="dashboard-table-wrap">
-      <table class="dashboard-table">
-        <thead><tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
-        <tbody>${orders.map(order => `<tr>
-          <td>#${esc(String(order.group_id || order.id))}</td>
-          <td>${esc(formatDate(order.date))}</td>
-          <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
-          <td>${orderStatusBadge(order.status)}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>` : emptyTable('You have not placed an order yet.')}
-    <div class="dashboard-actions" style="margin-top:var(--space-lg)">
-      <button class="btn btn-primary" onclick="closeModal('dashboardModal');scrollToProducts()">Browse products</button>
-      <button class="btn btn-outline" onclick="closeModal('dashboardModal');openLocationModal()">Change location</button>
-    </div>`;
-}
-
-function orderCustomerName(customer) {
-  if (!customer) return '';
-  if (typeof customer === 'string') return customer;
-  return customer.name || customer.email || '';
-}
-
-async function openVendorDashboard() {
-  if (!currentUser) { openAuthModal('signin'); return; }
-  openDashboardModal('Vendor Dashboard');
-
-  const user = currentUser;
-  const email = user.vendorEmail || user.email;
-  const [productCount, orderCount, products, orders] = await Promise.all([
-    countRows('products', { vendor_email: email, deleted: false }),
-    countRows('orders', { vendor_email: email }),
-    recentRows('products', 'id, name, price, stock, max_stock, status, deleted, image, unit, category, description, badge, variants, created_at', 'created_at', 50, { vendor_email: email, deleted: false }),
-    recentRows('orders', 'id, group_id, customer, total, status, date, customer_email', 'date', 10, { vendor_email: email })
-  ]);
-
-  dashboardProducts = products;
-  const content = document.getElementById('dashboardContent');
-  if (!content) return;
-
-  const badge = `<span class="badge-status ${user.verified ? 'approved' : 'pending'}">${user.verified ? 'Verified' : 'Pending review'}</span>`;
-
-  content.innerHTML = `
-    ${dashboardIdentity(user, [user.storeName, user.region, user.phone].filter(Boolean).join(' · '), badge)}
-    ${user.verified ? '' : '<div class="dashboard-note">Your store is awaiting verification. Products you add are saved as drafts until an administrator approves the store.</div>'}
-    <div class="dashboard-actions" style="margin-bottom:var(--space-lg)">
-      <button class="btn btn-primary" onclick="resetVendorProductForm();document.getElementById('vendorProductForm')?.scrollIntoView({behavior:'smooth',block:'center'})">+ Add product</button>
-      <button class="btn btn-outline" onclick="openVendorDashboard()">Refresh data</button>
-    </div>
-    <div class="dashboard-stats">
-      ${statCard('📦', 'Live products', productCount, 'primary')}
-      ${statCard('🧾', 'Orders received', orderCount, 'info')}
-      ${statCard('✅', 'Store status', user.verified ? 'Verified' : 'Pending', user.verified ? 'success' : 'warning')}
-      ${statCard('📅', 'Joined', formatDate(user.joinedAt), 'warning')}
-    </div>
-    <h3 class="dashboard-section-heading">Your products</h3>
-    ${products.length ? `<div class="dashboard-table-wrap">
-      <table class="dashboard-table">
-        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${products.map(product => `<tr>
-          <td>${esc(product.name)}</td>
-          <td class="dashboard-money">${formatPrice(Number(product.price) || 0)}</td>
-          <td>${esc(product.stock == null ? '—' : product.stock)}</td>
-          <td>${orderStatusBadge(product.status || 'active')}</td>
-          <td class="dashboard-row-actions">
-            <button class="btn btn-outline btn-sm" onclick="editVendorProduct('${esc(product.id)}')">Edit</button>
-            <button class="btn btn-ghost btn-sm" onclick="deleteVendorProduct('${esc(product.id)}')">Remove</button>
-          </td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>` : emptyTable('No products yet. Add your first product below.')}
-    <h3 class="dashboard-section-heading">Recent orders</h3>
-    ${orders.length ? `<div class="dashboard-table-wrap">
-      <table class="dashboard-table">
-        <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>${orders.map(order => {
-          const status = String(order.status || 'pending').toLowerCase();
-          const action = status === 'pending'
-            ? `<button class="btn btn-outline btn-sm" onclick="updateVendorOrderStatus('${esc(order.id)}', 'confirmed')">Confirm</button>`
-            : status === 'confirmed' || status === 'processing'
-              ? `<button class="btn btn-outline btn-sm" onclick="updateVendorOrderStatus('${esc(order.id)}', 'delivered')">Mark delivered</button>`
-              : '—';
-          return `<tr>
-            <td>#${esc(String(order.group_id || order.id))}</td>
-            <td>${esc(orderCustomerName(order.customer) || order.customer_email || '—')}</td>
-            <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
-            <td>${orderStatusBadge(order.status)}</td>
-            <td>${action}</td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>
-    </div>` : emptyTable('No orders yet. Orders from customers will appear here.')}
-
-    <h3 class="dashboard-section-heading" id="productFormHeading">Add a product</h3>
-    <form class="dashboard-form" id="vendorProductForm" onsubmit="saveVendorProduct(event)">
-      <input type="hidden" name="productId" value="">
-      <div class="input-group dashboard-form-full">
-        <label for="productName">Product name</label>
-        <input id="productName" name="productName" required maxlength="120" placeholder="e.g. Twiga Cement 50kg">
-      </div>
-      <div class="input-group">
-        <label for="productCategory">Category</label>
-        <select id="productCategory" name="productCategory" required>
-          <option value="">Select category</option>
-          ${CATEGORIES.map(category => `<option value="${esc(category.id)}">${esc(category.name)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="input-group">
-        <label for="productUnit">Unit</label>
-        <input id="productUnit" name="productUnit" required maxlength="20" placeholder="bag, piece, m²">
-      </div>
-      <div class="input-group">
-        <label for="productPrice">Price (TZS)</label>
-        <input id="productPrice" name="productPrice" type="number" min="100" step="100" required placeholder="18500">
-      </div>
-      <div class="input-group">
-        <label for="productStock">Stock available</label>
-        <input id="productStock" name="productStock" type="number" min="0" step="1" required placeholder="100">
-      </div>
-      <div class="input-group dashboard-form-full">
-        <label for="productDescription">Description</label>
-        <textarea id="productDescription" name="productDescription" rows="3" required maxlength="500" placeholder="What is included, size, grade, and delivery notes"></textarea>
-      </div>
-      <div class="input-group dashboard-form-full">
-        <label for="productImage">Image URL</label>
-        <input id="productImage" name="productImage" type="url" maxlength="500" placeholder="https://images.unsplash.com/photo-...">
-      </div>
-      <div class="dashboard-form-actions dashboard-form-full">
-        <button type="submit" class="btn btn-primary">Save product</button>
-        <button type="button" class="btn btn-outline" onclick="resetVendorProductForm()">Clear</button>
-      </div>
-    </form>`;
-}
-
-function editVendorProduct(productId) {
-  const product = dashboardProducts.find(item => String(item.id) === String(productId));
-  const form = document.getElementById('vendorProductForm');
-  if (!product || !form) return;
-
-  const setValue = (name, value) => {
-    const field = form.elements.namedItem(name);
-    if (field) field.value = value == null ? '' : value;
-  };
-  setValue('productId', product.id);
-  setValue('productName', product.name);
-  setValue('productCategory', product.category);
-  setValue('productUnit', product.unit);
-  setValue('productPrice', product.price);
-  setValue('productStock', product.stock);
-  setValue('productDescription', product.description);
-  setValue('productImage', product.image);
-
-  const heading = document.getElementById('productFormHeading');
-  if (heading) heading.textContent = `Edit ${product.name}`;
-  form.scrollIntoView({behavior: 'smooth', block: 'center'});
-  form.elements.namedItem('productName')?.focus({preventScroll: true});
-}
-
-function resetVendorProductForm() {
-  const form = document.getElementById('vendorProductForm');
-  if (!form) return;
-  form.reset();
-  const heading = document.getElementById('productFormHeading');
-  if (heading) heading.textContent = 'Add a product';
-}
-
-async function saveVendorProduct(event) {
-  event.preventDefault();
-  if (!currentUser || currentUser.role !== 'vendor') {
-    showToast('Vendor access required.', 'danger');
-    return;
-  }
-
-  const form = event.target;
-  const read = name => String(form.elements.namedItem(name)?.value || '').trim();
-  const productId = read('productId');
-  const name = read('productName');
-  const category = read('productCategory');
-  const unit = read('productUnit');
-  const description = read('productDescription');
-  const price = Number(read('productPrice'));
-  const stock = Number.parseInt(read('productStock'), 10);
-  const image = safeUrl(read('productImage')) || 'assets/product-placeholder.svg';
-  const email = currentUser.vendorEmail || currentUser.email;
-
-  if (!name || !category || !unit || !description) {
-    showToast('Please complete the product name, category, unit, and description.', 'warning');
-    return;
-  }
-  if (!Number.isFinite(price) || price <= 0) {
-    showToast('Enter a valid product price.', 'warning');
-    return;
-  }
-  if (!Number.isInteger(stock) || stock < 0) {
-    showToast('Enter a valid stock quantity.', 'warning');
-    return;
-  }
-
-  const existing = productId ? dashboardProducts.find(item => String(item.id) === String(productId)) : null;
-  const payload = {
-    name,
-    category,
-    unit,
-    price,
-    stock,
-    max_stock: Math.max(stock, Number(existing?.max_stock || 0), 1),
-    description,
-    image,
-    badge: existing?.badge || '',
-    variants: existing?.variants || []
-  };
-
-  showLoading('Saving product...');
-  try {
-    if (productId) {
-      const {error} = await _supabase.from('products').update(payload)
-        .eq('id', productId).eq('vendor_email', email);
-      if (error) throw error;
-      showToast('Product updated.', 'success');
-    } else {
-      const {error} = await _supabase.from('products').insert({
-        ...payload,
-        vendor_email: email,
-        vendor: currentUser.storeName || currentUser.name || 'Verified vendor',
-        status: currentUser.verified ? 'active' : 'draft',
-        rating: 0,
-        reviews: 0,
-        deleted: false
-      });
-      if (error) throw error;
-      showToast(currentUser.verified ? 'Product published.' : 'Product saved as a draft.', 'success');
-    }
-
-    resetVendorProductForm();
-    await loadProducts();
-    await openVendorDashboard();
-  } catch (error) {
-    showToast('Could not save product: ' + (error.message || 'Unknown error'), 'danger', 6000);
-  } finally {
-    hideLoading();
-  }
-}
-
-async function deleteVendorProduct(productId) {
-  if (!currentUser || currentUser.role !== 'vendor') {
-    showToast('Vendor access required.', 'danger');
-    return;
-  }
-  const product = dashboardProducts.find(item => String(item.id) === String(productId));
-  if (!product) return;
-  if (!confirm(`Remove "${product.name}" from your store?`)) return;
-
-  showLoading('Removing product...');
-  try {
-    const {error} = await _supabase.from('products')
-      .update({deleted: true, status: 'inactive'})
-      .eq('id', productId)
-      .eq('vendor_email', currentUser.vendorEmail || currentUser.email);
-    if (error) throw error;
-    showToast('Product removed.', 'success');
-    await loadProducts();
-    await openVendorDashboard();
-  } catch (error) {
-    showToast('Could not remove product: ' + (error.message || 'Unknown error'), 'danger');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function updateVendorOrderStatus(orderId, status) {
-  if (!currentUser || currentUser.role !== 'vendor') {
-    showToast('Vendor access required.', 'danger');
-    return;
-  }
-  if (!['confirmed', 'processing', 'delivered', 'cancelled'].includes(status)) return;
-
-  showLoading('Updating order...');
-  try {
-    const {error} = await _supabase.from('orders')
-      .update({status})
-      .eq('id', orderId)
-      .eq('vendor_email', currentUser.vendorEmail || currentUser.email);
-    if (error) throw error;
-    showToast(`Order marked ${status}.`, 'success');
-    await openVendorDashboard();
-  } catch (error) {
-    showToast('Could not update order: ' + (error.message || 'Unknown error'), 'danger');
-  } finally {
-    hideLoading();
-  }
-}
-
-async function openAdminDashboard() {
-  if (!currentUser || currentUser.role !== 'admin') {
-    showToast('Admin access required.', 'danger');
-    return;
-  }
-  openDashboardModal('Admin Console');
-
-  const [customerCount, vendorCount, productCount, orderCount, pendingCount, customers, vendors, orders] = await Promise.all([
-    countRows('customers'),
-    countRows('vendors'),
-    countRows('products'),
-    countRows('orders'),
-    countRows('vendors', { verified: false }),
-    recentRows('customers', 'id, name, email, phone, verified, joined_at', 'joined_at', 5),
-    recentRows('vendors', 'id, store_name, name, email, region, verified, joined_at', 'joined_at', 5),
-    recentRows('orders', 'id, customer, total, status, date', 'date', 5)
-  ]);
-
-  const content = document.getElementById('dashboardContent');
-  if (!content) return;
-
-  content.innerHTML = `
-    ${dashboardIdentity(currentUser, 'Marketplace administrator', '<span class="badge-status approved">Admin</span>')}
-    ${Number(pendingCount) > 0 ? `<div class="dashboard-note">${esc(pendingCount)} vendor${pendingCount === 1 ? '' : 's'} awaiting verification.</div>` : ''}
-    <div class="dashboard-stats">
-      ${statCard('👥', 'Customers', customerCount, 'primary')}
-      ${statCard('🏪', 'Vendors', vendorCount, 'success')}
-      ${statCard('📦', 'Products', productCount, 'info')}
-      ${statCard('🧾', 'Orders', orderCount, 'warning')}
-    </div>
-
-    <h3 class="dashboard-section-heading">Newest customers</h3>
-    ${customers.length ? `<div class="dashboard-table-wrap">
-      <table class="dashboard-table">
-        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Status</th></tr></thead>
-        <tbody>${customers.map(customer => `<tr>
-          <td>${esc(customer.name)}</td>
-          <td>${esc(customer.email)}</td>
-          <td>${esc(customer.phone || '—')}</td>
-          <td>${esc(formatDate(customer.joined_at))}</td>
-          <td><span class="badge-status ${customer.verified ? 'approved' : 'pending'}">${customer.verified ? 'Verified' : 'Pending'}</span></td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>` : emptyTable('No customers yet.')}
-
-    <h3 class="dashboard-section-heading">Newest vendors</h3>
-    ${vendors.length ? `<div class="dashboard-table-wrap">
-      <table class="dashboard-table">
-        <thead><tr><th>Store</th><th>Contact</th><th>Region</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>${vendors.map(vendor => `<tr>
-          <td>${esc(vendor.store_name || vendor.name)}</td>
-          <td>${esc(vendor.email)}</td>
-          <td>${esc(vendor.region || '—')}</td>
-          <td><span class="badge-status ${vendor.verified ? 'approved' : 'pending'}">${vendor.verified ? 'Verified' : 'Pending'}</span></td>
-          <td><button type="button" class="btn btn-outline btn-sm" onclick="adminSetVendorVerified('${esc(vendor.id)}', ${vendor.verified ? 'false' : 'true'})">${vendor.verified ? 'Unverify' : 'Verify'}</button></td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>` : emptyTable('No vendors yet.')}
-
-    <h3 class="dashboard-section-heading">Recent orders</h3>
-    ${orders.length ? `<div class="dashboard-table-wrap">
-      <table class="dashboard-table">
-        <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
-        <tbody>${orders.map(order => `<tr>
-          <td>#${esc(String(order.id).slice(0, 8))}</td>
-          <td>${esc(orderCustomerName(order.customer) || '—')}</td>
-          <td class="dashboard-money">${formatPrice(Number(order.total) || 0)}</td>
-          <td>${orderStatusBadge(order.status)}</td>
-          <td>${esc(formatDate(order.date))}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>` : emptyTable('No orders yet.')}
-    <div class="dashboard-actions" style="margin-top:var(--space-lg)">
-      <button class="btn btn-outline" onclick="openAdminDashboard()">Refresh data</button>
-    </div>`;
-}
-
-async function adminSetVendorVerified(vendorId, verified) {
-  if (!currentUser || currentUser.role !== 'admin') {
-    showToast('Admin access required.', 'danger');
-    return;
-  }
-  showLoading(verified ? 'Verifying vendor...' : 'Updating vendor...');
-  try {
-    const { error } = await _supabase.from('vendors').update({ verified }).eq('id', vendorId);
-    if (error) throw error;
-    showToast(verified ? 'Vendor verified.' : 'Vendor verification removed.', 'success');
-    await openAdminDashboard();
-  } catch (error) {
-    showToast('Could not update vendor: ' + (error.message || 'Unknown error'), 'danger');
-  } finally { hideLoading(); }
+function openAdminDashboard() {
+  window.location.href = '/admin';
 }
 
 // ============ SEARCH & SORT ============
@@ -2289,7 +1832,6 @@ document.addEventListener('DOMContentLoaded', () => {
   _supabase.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT' && currentUser) {
       clearSession();
-      closeModal('dashboardModal');
     }
   });
 

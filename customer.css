@@ -1,0 +1,9 @@
+/* Customer Dashboard — blue workspace accent */
+:root {
+  --accent: #3b82f6;
+  --accent-rgb: 59, 130, 246;
+  --accent-strong: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --accent-text: #1d4ed8;
+  --accent-contrast: #ffffff;
+}
