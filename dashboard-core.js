@@ -585,7 +585,7 @@
   function gateShell(cardHtml) {
     const meta = ROLE_META[state.role] || ROLE_META.customer;
     const points = meta.points.map(point => `<li>${icon('check')}<span>${esc(point)}</span></li>`).join('');
-    return `<div class="gate-wrap">
+    return `<main class="gate-wrap" id="gateMain" tabindex="-1">
       <section class="gate-brand">
         <a class="gate-logo" href="/" aria-label="JengaNasi home">
           ${brandLogo()}
@@ -603,7 +603,7 @@
         </div>
       </section>
       <section class="gate-panel">${cardHtml}</section>
-    </div>`;
+    </main>`;
   }
 
   function gateSwitchLinks() {
@@ -622,6 +622,8 @@
     const root = document.getElementById('gateRoot');
     const shell = document.getElementById('appShell');
     if (shell) shell.hidden = true;
+    const skip = document.querySelector('.skip-link');
+    if (skip) skip.setAttribute('href', '#gateMain');
     if (!root) return;
     root.hidden = false;
     root.innerHTML = html;
@@ -843,6 +845,8 @@
       root.innerHTML = '';
     }
     if (shell) shell.hidden = false;
+    const skip = document.querySelector('.skip-link');
+    if (skip) skip.setAttribute('href', '#dashboardMain');
     const callback = state.onReady;
     if (typeof callback === 'function') {
       Promise.resolve(callback(profile)).catch(error => {

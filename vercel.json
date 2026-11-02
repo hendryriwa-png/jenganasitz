@@ -3,6 +3,18 @@
   "framework": null,
   "rewrites": [
     {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/vendor",
+      "destination": "/vendor.html"
+    },
+    {
+      "source": "/customer",
+      "destination": "/customer.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

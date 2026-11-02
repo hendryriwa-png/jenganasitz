@@ -223,13 +223,14 @@ ol {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
   box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.22);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-strong);
+  filter: brightness(0.92);
   box-shadow: 0 10px 26px rgba(var(--accent-rgb), 0.28);
 }
 
@@ -2549,6 +2550,7 @@ ol {
 
 .gate-card-head .gate-kicker {
   margin-bottom: 9px;
+  color: var(--accent-text);
 }
 
 .gate-card-head h1,
@@ -2627,7 +2629,7 @@ ol {
 .gate-switch > span {
   display: block;
   margin-bottom: 8px;
-  color: var(--muted-2);
+  color: var(--muted);
   font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.12em;
