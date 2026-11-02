@@ -1,0 +1,49 @@
+name: Setup media storage
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply storage policies
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          token = os.environ['SUPABASE_ACCESS_TOKEN']
+          ref = os.environ['SUPABASE_PROJECT_REF']
+          sql = open('supabase/storage-policies.sql', encoding='utf-8').read()
+          payload = json.dumps({'query': sql}).encode('utf-8')
+          request = urllib.request.Request(
+              f'https://api.supabase.com/v1/projects/{ref}/database/query',
+              data=payload,
+              headers={
+                  'Authorization': f'Bearer {token}',
+                  'Content-Type': 'application/json',
+              },
+              method='POST',
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=60) as response:
+                  body = response.read().decode('utf-8', 'replace')
+                  print('status', response.status)
+                  print(body[:1000])
+          except urllib.error.HTTPError as error:
+              body = error.read().decode('utf-8', 'replace')
+              print('status', error.code)
+              print(body[:1000])
+              raise SystemExit(1)
+          PY
