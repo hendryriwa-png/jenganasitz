@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#0a1221">
   <title>My Account · JengaNasi</title>
   <meta name="description" content="JengaNasi customer account for order tracking, delivery details, and contact preferences.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect fill='%23f59e0b' width='32' height='32'/%3E%3Ctext x='16' y='16' font-family='Arial' font-size='12' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJN%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="dns-prefetch" href="https://wpspoxilxzdjbjdzzici.supabase.co">
   <link rel="stylesheet" href="dashboard.css">
@@ -97,7 +98,7 @@
         </div>
         <div class="topbar-actions">
           <span class="topbar-date" id="todayLabel"></span>
-          <a class="btn btn-primary btn-sm" href="/">
+          <a class="btn btn-primary btn-sm" href="/" aria-label="Shop materials">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-4.5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9h18"/></svg>
             <span>Shop materials</span>
           </a>
@@ -126,7 +127,7 @@
                 <a class="btn btn-ghost-on-dark" href="/">Shop materials</a>
               </div>
             </div>
-            <div class="welcome-aside" aria-label="Orders placed">
+            <div class="welcome-aside" role="group" aria-label="Orders placed">
               <span>Orders placed</span>
               <strong id="heroOrderCount">—</strong>
               <small id="heroOrderCountLabel">loading orders…</small>
@@ -244,6 +245,18 @@
               </div>
               <div class="panel-body">
                 <form id="customerProfileForm" class="form-grid" novalidate>
+                  <div class="field field-full">
+                    <label for="customerAvatarFile">Profile photo</label>
+                    <div class="avatar-upload">
+                      <span class="avatar avatar-lg" id="customerAvatarPreview" data-user-initials aria-hidden="true">C</span>
+                      <div class="image-actions">
+                        <input id="customerAvatarFile" name="customerAvatarFile" type="file" accept="image/*" class="file-input-hidden">
+                        <label class="btn btn-outline btn-sm" for="customerAvatarFile">Upload photo</label>
+                        <button type="button" class="btn btn-ghost btn-sm" id="removeCustomerAvatarBtn">Remove</button>
+                        <span class="field-hint">JPG, PNG, or WebP. We resize it automatically.</span>
+                      </div>
+                    </div>
+                  </div>
                   <div class="field field-full">
                     <label for="customerName">Full name</label>
                     <input id="customerName" name="customerName" type="text" maxlength="90" autocomplete="name" required>

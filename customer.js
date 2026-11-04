@@ -10,7 +10,9 @@
     profile: null,
     orders: [],
     vendorNames: {},
-    bound: false
+    bound: false,
+    avatarFile: null,
+    avatarRemoved: false
   };
 
   JN.boot({ role: 'customer', onReady: init });
@@ -33,6 +35,43 @@
     if (nameField) nameField.value = profile.name || '';
     if (phoneField) phoneField.value = profile.phone || '';
     if (emailField) emailField.value = profile.email || '';
+
+    state.avatarFile = null;
+    state.avatarRemoved = false;
+    const avatarInput = document.getElementById('customerAvatarFile');
+    if (avatarInput) avatarInput.value = '';
+    JN.refreshIdentity(profile);
+  }
+
+  async function handleAvatarPick(input) {
+    const file = input && input.files && input.files[0];
+    if (!file) return;
+    JN.showLoading('Preparing your photo…');
+    try {
+      const compressed = await JN.compressImage(file, {
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 0.8
+      });
+      state.avatarFile = file;
+      state.avatarRemoved = false;
+      state.profile = Object.assign({}, state.profile, { avatar: compressed.dataUrl });
+      JN.refreshIdentity(state.profile);
+    } catch (error) {
+      input.value = '';
+      JN.toast(error.message || 'That photo could not be prepared.', 'warning');
+    } finally {
+      JN.hideLoading();
+    }
+  }
+
+  function removeAvatar() {
+    state.avatarFile = null;
+    state.avatarRemoved = true;
+    state.profile = Object.assign({}, state.profile, { avatar: '' });
+    const input = document.getElementById('customerAvatarFile');
+    if (input) input.value = '';
+    JN.refreshIdentity(state.profile);
   }
 
   function bindEvents() {
@@ -58,6 +97,11 @@
     if (status) status.addEventListener('change', renderOrders);
     if (form) form.addEventListener('submit', saveProfile);
     if (reset) reset.addEventListener('click', () => applyProfile(state.profile || {}));
+
+    const avatarInput = document.getElementById('customerAvatarFile');
+    const removeAvatarBtn = document.getElementById('removeCustomerAvatarBtn');
+    if (avatarInput) avatarInput.addEventListener('change', () => handleAvatarPick(avatarInput));
+    if (removeAvatarBtn) removeAvatarBtn.addEventListener('click', removeAvatar);
   }
 
   async function loadData(options) {
@@ -443,11 +487,28 @@
       return;
     }
 
+    const avatarChanged = Boolean(state.avatarFile) || state.avatarRemoved;
+    let avatar = state.profile.avatar || '';
     const submit = document.getElementById('saveCustomerBtn');
     if (submit) submit.disabled = true;
-    JN.showLoading('Saving your details…');
+    JN.showLoading(state.avatarFile ? 'Uploading your photo…' : 'Saving your details…');
 
     try {
+      if (state.avatarFile) {
+        const uploaded = await JN.uploadImage(state.avatarFile, {
+          folder: 'avatars',
+          maxWidth: 512,
+          maxHeight: 512,
+          quality: 0.8,
+          fallbackMaxWidth: 160,
+          fallbackQuality: 0.62,
+          fallbackMaxChars: 6000
+        });
+        avatar = uploaded.url;
+      } else if (state.avatarRemoved) {
+        avatar = '';
+      }
+
       const { data, error } = await JN.client.from('customers')
         .update({ name, phone })
         .eq('id', state.profile.id)
@@ -456,14 +517,33 @@
       if (error) throw error;
       if (!data) throw new Error('Your customer profile could not be updated.');
 
+      let avatarWarning = false;
+      if (avatarChanged) {
+        const { error: avatarError } = await JN.client.auth.updateUser({
+          data: { avatar: avatar || null }
+        });
+        if (avatarError) {
+          avatarWarning = true;
+          console.error('Avatar metadata update failed:', avatarError);
+        }
+      }
+
       state.profile = Object.assign({}, state.profile, {
         name: data.name || name,
-        phone: data.phone || ''
+        phone: data.phone || '',
+        avatar
       });
+      state.avatarFile = null;
+      state.avatarRemoved = false;
+      const avatarInput = document.getElementById('customerAvatarFile');
+      if (avatarInput) avatarInput.value = '';
       JN.updateCachedUser(state.profile);
       JN.refreshIdentity(state.profile);
       applyProfile(state.profile);
-      JN.toast('Contact details saved.', 'success');
+      JN.toast(
+        avatarWarning ? 'Details saved, but your photo could not be stored yet.' : 'Contact details saved.',
+        avatarWarning ? 'warning' : 'success'
+      );
     } catch (error) {
       console.error('Customer profile update failed:', error);
       JN.toast('Could not save your details: ' + (error.message || 'Unknown error'), 'danger');

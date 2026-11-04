@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#0a1221">
   <title>Admin Console · JengaNasi</title>
   <meta name="description" content="JengaNasi administrator console for vendor verification, catalogue oversight, and marketplace orders.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect fill='%23f59e0b' width='32' height='32'/%3E%3Ctext x='16' y='16' font-family='Arial' font-size='12' fill='white' text-anchor='middle' dominant-baseline='middle'%3EJN%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="dns-prefetch" href="https://wpspoxilxzdjbjdzzici.supabase.co">
   <link rel="stylesheet" href="dashboard.css">
@@ -106,7 +107,7 @@
         </div>
         <div class="topbar-actions">
           <span class="topbar-date" id="todayLabel"></span>
-          <a class="btn btn-ghost btn-sm" href="/">
+          <a class="btn btn-ghost btn-sm" href="/" aria-label="Open storefront">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-4.5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9h18"/></svg>
             <span>Storefront</span>
           </a>
@@ -135,7 +136,7 @@
                 <a class="btn btn-ghost-on-dark" href="/">Open storefront</a>
               </div>
             </div>
-            <div class="welcome-aside" aria-label="Pending vendor verifications">
+            <div class="welcome-aside" role="group" aria-label="Pending vendor verifications">
               <span>Verification queue</span>
               <strong id="heroPendingCount">—</strong>
               <small id="heroPendingLabel">loading vendors…</small>

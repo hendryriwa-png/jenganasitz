@@ -71,10 +71,14 @@ function esc(str) {
   return String(str == null ? '' : str).replace(/[&<>"']/g, c => ESC_MAP[c]);
 }
 
+const INLINE_IMAGE_PATTERN = /^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i;
+
 function safeUrl(str) {
   if (!str) return '';
+  const raw = String(str).trim();
+  if (INLINE_IMAGE_PATTERN.test(raw)) return raw;
   try {
-    const url = new URL(str, location.origin);
+    const url = new URL(raw, location.origin);
     return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
   } catch (e) {
     return '';
@@ -395,19 +399,27 @@ function updateAuthUI() {
   const mobileAuthBtn = document.getElementById('mobileAuthBtn');
   const mobileVendorBtn = document.getElementById('mobileVendorBtn');
   const mobileSignOutBtn = document.getElementById('mobileSignOutBtn');
+  const footerDashboardItem = document.getElementById('footerDashboardItem');
+  const footerDashboardLink = document.getElementById('footerDashboardLink');
+
+  const dashboard = {
+    admin: { href: '/admin', label: 'Admin Console' },
+    vendor: { href: '/vendor', label: 'Vendor Dashboard' },
+    customer: { href: '/customer', label: 'My Account' }
+  };
 
   if (currentUser) {
+    const destination = dashboard[currentUser.role] || dashboard.customer;
     if (authBtn) authBtn.style.display = 'none';
     if (vendorBtn) vendorBtn.style.display = 'none';
     if (userMenu) userMenu.style.display = 'flex';
     if (userNameEl) userNameEl.textContent = (currentUser.name || 'Account').split(' ')[0];
     const dashBtn = document.getElementById('userDashboardBtn');
-    if (dashBtn) {
-      dashBtn.textContent = currentUser.role === 'admin'
-        ? 'Admin Console'
-        : currentUser.role === 'vendor'
-          ? 'Vendor Dashboard'
-          : 'My Account';
+    if (dashBtn) dashBtn.textContent = destination.label;
+    if (footerDashboardItem && footerDashboardLink) {
+      footerDashboardLink.textContent = destination.label;
+      footerDashboardLink.href = destination.href;
+      footerDashboardItem.hidden = false;
     }
     if (mobileAuthBtn) {
       mobileAuthBtn.textContent = 'My Account';
@@ -420,6 +432,7 @@ function updateAuthUI() {
     if (authBtn) authBtn.style.display = 'flex';
     if (vendorBtn) vendorBtn.style.display = 'flex';
     if (userMenu) userMenu.style.display = 'none';
+    if (footerDashboardItem) footerDashboardItem.hidden = true;
     if (mobileAuthBtn) {
       mobileAuthBtn.textContent = 'Sign In';
       mobileAuthBtn.onclick = () => openAuthModal();
@@ -1214,7 +1227,7 @@ function renderProducts() {
         ? esc(activeFilters.vendor)
         : 'this category';
     grid.innerHTML = `
-      <div class="empty-state" role="listitem">
+      <div class="empty-state">
         <div class="empty-state-icon">${filtersActive ? '🔍' : '🏗️'}</div>
         <h3>${filtersActive ? 'No products match your search' : 'No products listed yet'}</h3>
         <p>${filtersActive
@@ -1232,7 +1245,7 @@ function renderProducts() {
     const reviews = Number(p.reviews || 0);
     const stock = Number(p.stock || 0);
     return `
-    <article class="card product-card" role="listitem" data-product-id="${esc(p.id)}" onclick="viewProduct(this.dataset.productId)">
+    <article class="card product-card" data-product-id="${esc(p.id)}" onclick="viewProduct(this.dataset.productId)">
       <div class="product-image">
         <img src="${productImage(p)}" alt="${esc(p.name)}" loading="lazy" width="400" height="300"
              onerror="this.onerror=null;this.src='assets/product-placeholder.svg'">
@@ -1294,7 +1307,7 @@ function renderVendors() {
 
   if (vendors.length === 0) {
     carousel.innerHTML = `
-      <div class="empty-state" role="listitem">
+      <div class="empty-state">
         <div class="empty-state-icon">🏪</div>
         <h3>Verified vendors are onboarding</h3>
         <p>New stores are being reviewed before they go live. Register your business to join the marketplace.</p>
@@ -1310,7 +1323,7 @@ function renderVendors() {
     const products = Number(v.product_count || 0);
     const photo = safeUrl(v.photo);
     return `
-      <article class="card vendor-card" role="listitem">
+      <article class="card vendor-card">
         <div class="vendor-header">
           <div class="vendor-avatar">
             ${photo

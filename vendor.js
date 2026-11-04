@@ -10,7 +10,9 @@
     profile: null,
     products: [],
     orders: [],
-    bound: false
+    bound: false,
+    productImageFile: null,
+    storePhotoFile: null
   };
 
   JN.boot({ role: 'vendor', onReady: init });
@@ -66,6 +68,79 @@
     }
     const vendorType = document.getElementById('storeVendorType');
     if (vendorType) vendorType.textContent = JN.vendorTypeLabel(profile.vendorType);
+
+    state.storePhotoFile = null;
+    const storeFile = document.getElementById('storePhotoFile');
+    if (storeFile) storeFile.value = '';
+    setImagePreview('storePhotoPreview', profile.photo, 'No image yet');
+  }
+
+  function setImagePreview(id, source, emptyText) {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.innerHTML = '';
+    const url = JN.safeUrl(source);
+    if (url) {
+      const image = document.createElement('img');
+      image.src = url;
+      image.alt = '';
+      image.loading = 'lazy';
+      element.appendChild(image);
+      element.classList.remove('is-empty');
+    } else {
+      const label = document.createElement('span');
+      label.textContent = emptyText || 'No image selected';
+      element.appendChild(label);
+      element.classList.add('is-empty');
+    }
+  }
+
+  async function handleImagePick(input, kind) {
+    const file = input && input.files && input.files[0];
+    if (!file) return;
+    JN.showLoading('Preparing image…');
+    try {
+      const isProduct = kind === 'product';
+      const compressed = await JN.compressImage(file, {
+        maxWidth: isProduct ? 1100 : 900,
+        maxHeight: isProduct ? 1100 : 900,
+        quality: 0.76
+      });
+      if (isProduct) {
+        state.productImageFile = file;
+        setImagePreview('productImagePreview', compressed.dataUrl, 'No image selected');
+        const field = document.getElementById('productImage');
+        if (field) field.value = compressed.dataUrl;
+      } else {
+        state.storePhotoFile = file;
+        setImagePreview('storePhotoPreview', compressed.dataUrl, 'No image yet');
+        const field = document.getElementById('storePhoto');
+        if (field) field.value = compressed.dataUrl;
+      }
+    } catch (error) {
+      input.value = '';
+      JN.toast(error.message || 'That image could not be prepared.', 'warning');
+    } finally {
+      JN.hideLoading();
+    }
+  }
+
+  function clearPickedImage(kind) {
+    if (kind === 'product') {
+      state.productImageFile = null;
+      const input = document.getElementById('productImageFile');
+      if (input) input.value = '';
+      const field = document.getElementById('productImage');
+      if (field) field.value = '';
+      setImagePreview('productImagePreview', '', 'No image selected');
+    } else {
+      state.storePhotoFile = null;
+      const input = document.getElementById('storePhotoFile');
+      if (input) input.value = '';
+      const field = document.getElementById('storePhoto');
+      if (field) field.value = '';
+      setImagePreview('storePhotoPreview', '', 'No image yet');
+    }
   }
 
   function bindEvents() {
@@ -107,6 +182,16 @@
     if (profileForm) profileForm.addEventListener('submit', saveProfile);
     if (productForm) productForm.addEventListener('submit', saveProduct);
     if (resetProfile) resetProfile.addEventListener('click', () => applyProfile(state.profile || {}));
+
+    const storePhotoInput = document.getElementById('storePhotoFile');
+    const productImageInput = document.getElementById('productImageFile');
+    if (storePhotoInput) storePhotoInput.addEventListener('change', () => handleImagePick(storePhotoInput, 'store'));
+    if (productImageInput) productImageInput.addEventListener('change', () => handleImagePick(productImageInput, 'product'));
+
+    const removeStorePhoto = document.getElementById('removeStorePhotoBtn');
+    const removeProductImage = document.getElementById('removeProductImageBtn');
+    if (removeStorePhoto) removeStorePhoto.addEventListener('click', () => clearPickedImage('store'));
+    if (removeProductImage) removeProductImage.addEventListener('click', () => clearPickedImage('product'));
   }
 
   async function loadData(options) {
@@ -500,6 +585,9 @@
     if (!form) return;
 
     form.reset();
+    state.productImageFile = null;
+    const imageFile = document.getElementById('productImageFile');
+    if (imageFile) imageFile.value = '';
     const idField = form.elements.namedItem('productId');
     if (idField) idField.value = '';
 
@@ -514,6 +602,7 @@
       setField(form, 'productDescription', product.description || '');
       setField(form, 'productImage', product.image || '');
     }
+    setImagePreview('productImagePreview', product ? product.image : '', 'No image selected');
 
     if (title) title.textContent = product ? 'Edit product' : 'Add product';
     const publishNote = document.getElementById('productPublishNote');
@@ -546,7 +635,7 @@
     const description = readField(form, 'productDescription');
     const price = Number(readField(form, 'productPrice'));
     const stock = Number.parseInt(readField(form, 'productStock'), 10);
-    const image = JN.safeUrl(readField(form, 'productImage')) || 'assets/product-placeholder.svg';
+    let image = JN.safeUrl(readField(form, 'productImage')) || 'assets/product-placeholder.svg';
     const email = state.profile.vendorEmail || state.profile.email;
 
     if (!name || !category || !unit || !description) {
@@ -563,24 +652,40 @@
     }
 
     const existing = productId ? productById(productId) : null;
-    const payload = {
-      name,
-      category,
-      unit,
-      price,
-      stock,
-      max_stock: Math.max(stock, Number(existing && existing.max_stock) || 0, 1),
-      description,
-      image,
-      badge: (existing && existing.badge) || '',
-      variants: (existing && existing.variants) || []
-    };
-
     const submit = document.getElementById('saveProductBtn');
     if (submit) submit.disabled = true;
-    JN.showLoading(existing ? 'Saving changes…' : 'Adding product…');
+    JN.showLoading(state.productImageFile
+      ? 'Uploading product image…'
+      : (existing ? 'Saving changes…' : 'Adding product…'));
 
     try {
+      if (state.productImageFile) {
+        const uploaded = await JN.uploadImage(state.productImageFile, {
+          folder: 'products',
+          maxWidth: 1200,
+          maxHeight: 1200,
+          quality: 0.76,
+          maxChars: 220000,
+          fallbackMaxWidth: 480,
+          fallbackQuality: 0.6,
+          fallbackMaxChars: 5000
+        });
+        image = uploaded.url;
+      }
+
+      const payload = {
+        name,
+        category,
+        unit,
+        price,
+        stock,
+        max_stock: Math.max(stock, Number(existing && existing.max_stock) || 0, 1),
+        description,
+        image,
+        badge: (existing && existing.badge) || '',
+        variants: (existing && existing.variants) || []
+      };
+
       if (existing) {
         const { data, error } = await JN.client.from('products')
           .update(Object.assign({}, payload, { vendor: state.profile.storeName || state.profile.name }))
@@ -604,6 +709,9 @@
         JN.toast(state.profile.verified ? 'Product published.' : 'Product saved as a draft until your store is verified.', 'success');
       }
 
+      state.productImageFile = null;
+      const imageInput = document.getElementById('productImageFile');
+      if (imageInput) imageInput.value = '';
       JN.closeModal('productModal');
       await loadData({ silent: true });
     } catch (error) {
@@ -760,7 +868,7 @@
     const storeName = readField(form, 'storeName');
     const phone = readField(form, 'storePhone');
     const region = readField(form, 'storeRegion');
-    const photo = JN.safeUrl(readField(form, 'storePhoto'));
+    let photo = JN.safeUrl(readField(form, 'storePhoto'));
 
     if (!storeName) {
       JN.toast('Enter your store name.', 'warning');
@@ -774,9 +882,23 @@
     const previousName = String(state.profile.storeName || state.profile.name || '').trim();
     const submit = document.getElementById('saveVendorProfileBtn');
     if (submit) submit.disabled = true;
-    JN.showLoading('Saving store details…');
+    JN.showLoading(state.storePhotoFile ? 'Uploading store image…' : 'Saving store details…');
 
     try {
+      if (state.storePhotoFile) {
+        const uploaded = await JN.uploadImage(state.storePhotoFile, {
+          folder: 'stores',
+          maxWidth: 1000,
+          maxHeight: 1000,
+          quality: 0.76,
+          maxChars: 180000,
+          fallbackMaxWidth: 420,
+          fallbackQuality: 0.6,
+          fallbackMaxChars: 5000
+        });
+        photo = uploaded.url;
+      }
+
       const { data, error } = await JN.client.from('vendors')
         .update({ store_name: storeName, phone, region, photo })
         .eq('id', state.profile.id)
@@ -790,8 +912,12 @@
         storeName: savedName,
         phone: data.phone || '',
         region: data.region || '',
-        photo: data.photo || ''
+        photo: data.photo || '',
+        avatar: data.photo || ''
       });
+      state.storePhotoFile = null;
+      const storeFile = document.getElementById('storePhotoFile');
+      if (storeFile) storeFile.value = '';
       JN.updateCachedUser(state.profile);
       JN.refreshIdentity(state.profile);
       applyProfile(state.profile);

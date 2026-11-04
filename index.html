@@ -99,8 +99,9 @@
               <div class="cart-footer" id="cartFooter" style="display:none"><div class="cart-total"><span>Total</span><span class="cart-total-amount" id="cartTotalAmount">TSh 0</span></div><button class="btn btn-primary btn-block" onclick="closeCart();openCheckout()">Proceed to Checkout</button></div>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" id="authBtn" aria-label="Sign in or create account" aria-haspopup="dialog" onclick="openAuthModal()">
+          <button class="btn btn-ghost btn-sm auth-btn" id="authBtn" aria-label="Sign in or create account" aria-haspopup="dialog" onclick="openAuthModal()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="auth-btn-label">Sign In</span>
           </button>
           <button class="btn btn-primary btn-sm" id="vendorBtn" onclick="openVendorRegistration()">Become a Vendor</button>
           <div class="dropdown user-menu" id="userMenu" style="display:none">
@@ -155,7 +156,7 @@
             <div class="stat"><span class="stat-value" id="statCategories">12</span><span class="stat-label">Categories</span></div>
             <div class="stat"><span class="stat-value" id="statRegions">—</span><span class="stat-label">Regions Covered</span></div>
           </div>
-          <div class="hero-trust" id="heroTrust" aria-label="Featured vendors">
+          <div class="hero-trust" id="heroTrust" role="group" aria-label="Featured vendors">
             <span class="hero-trust-label">Featured vendors</span>
             <div class="hero-trust-logos" id="heroTrustLogos" aria-hidden="true"></div>
           </div>
@@ -191,7 +192,7 @@
             <a href="#products" class="btn btn-ghost" onclick="clearProductFilters(event)">View All Products</a>
           </div>
         </header>
-        <div class="products-grid" id="productsGrid" role="list"></div>
+        <div class="products-grid" id="productsGrid"></div>
       </div>
     </section>
 
@@ -201,7 +202,7 @@
           <h2 id="vendors-title" class="section-title">Verified Vendors</h2>
           <p class="section-subtitle">Trusted suppliers across Tanzania</p>
         </header>
-        <div class="vendors-carousel" id="vendorsCarousel" role="list"></div>
+        <div class="vendors-carousel" id="vendorsCarousel"></div>
         <button type="button" class="btn btn-ghost" id="vendorsToggle" onclick="toggleVendorList()">View all vendors</button>
       </div>
     </section>
@@ -293,9 +294,7 @@
             <ul>
               <li><a href="#about">About Us</a></li>
               <li><a href="#" onclick="event.preventDefault();openInfoModal('fees')">Site Fees</a></li>
-              <li><a href="/customer.html">My Account</a></li>
-              <li><a href="/vendor.html">Vendor Dashboard</a></li>
-              <li><a href="/admin.html">Admin Console</a></li>
+              <li id="footerDashboardItem" hidden><a href="/customer" id="footerDashboardLink">My Dashboard</a></li>
               <li><a href="mailto:info@jenganasi.co.tz">Email Us</a></li>
             </ul>
           </div>

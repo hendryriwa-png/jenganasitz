@@ -52,6 +52,15 @@
         loadData();
       } else if (action === 'verify-vendor') {
         setVendorVerified(element.dataset.id, element.dataset.verified !== 'true');
+      } else if (action === 'toggle-vendor-suspend') {
+        setVendorSuspended(element.dataset.id, element.dataset.suspended !== 'true');
+      } else if (action === 'toggle-customer-suspend') {
+        setCustomerSuspended(element.dataset.id, element.dataset.suspended !== 'true');
+      } else if (action === 'toggle-product-archive') {
+        setProductArchived(element.dataset.id, element.dataset.archived !== 'true');
+      } else if (action === 'update-order-status') {
+        const select = document.getElementById('adminOrderStatusSelect');
+        setOrderStatus(element.dataset.id, select ? select.value : '');
       } else if (action === 'view-order') {
         showOrderDetail(element.dataset.id);
       } else if (action === 'filter-vendor-products') {
@@ -461,8 +470,11 @@
             ? JN.statusPill('verified', 'Verified')
             : JN.statusPill('pending', 'Pending');
         const mainAction = vendor.suspended
-          ? '<span class="field-hint">Review required</span>'
+          ? `<button type="button" class="btn btn-primary btn-sm" data-action="toggle-vendor-suspend" data-id="${JN.esc(vendor.id)}" data-suspended="true">Reactivate</button>`
           : `<button type="button" class="btn ${vendor.verified ? 'btn-outline' : 'btn-primary'} btn-sm" data-action="verify-vendor" data-id="${JN.esc(vendor.id)}" data-verified="${vendor.verified ? 'true' : 'false'}">${vendor.verified ? 'Unverify' : 'Verify'}</button>`;
+        const suspendAction = vendor.suspended
+          ? ''
+          : `<button type="button" class="btn btn-ghost btn-sm" data-action="toggle-vendor-suspend" data-id="${JN.esc(vendor.id)}" data-suspended="false">Suspend</button>`;
 
         return `<tr>
           <td>
@@ -487,6 +499,7 @@
           <td>
             <div class="table-actions">
               <button type="button" class="btn btn-ghost btn-sm" data-action="filter-vendor-products" data-email="${JN.esc(vendor.email || '')}">Products</button>
+              ${suspendAction}
               ${mainAction}
             </div>
           </td>
@@ -532,6 +545,7 @@
         <th scope="col">Orders</th>
         <th scope="col">Joined</th>
         <th scope="col">Standing</th>
+        <th scope="col" class="is-right">Action</th>
       </tr></thead>
       <tbody>${customers.map(customer => `<tr>
         <td>
@@ -545,6 +559,9 @@
         <td>${customerOrderCount(customer)}</td>
         <td>${JN.esc(JN.formatDate(customer.joined_at))}</td>
         <td>${customer.suspended ? JN.statusPill('suspended', 'Suspended') : JN.statusPill('active', 'Active')}</td>
+        <td class="is-right">
+          <button type="button" class="btn ${customer.suspended ? 'btn-primary' : 'btn-ghost'} btn-sm" data-action="toggle-customer-suspend" data-id="${JN.esc(customer.id)}" data-suspended="${customer.suspended ? 'true' : 'false'}">${customer.suspended ? 'Reactivate' : 'Suspend'}</button>
+        </td>
       </tr>`).join('')}</tbody>
     </table>`;
   }
@@ -592,6 +609,7 @@
         <th scope="col">Stock</th>
         <th scope="col">Status</th>
         <th scope="col">Listed</th>
+        <th scope="col" class="is-right">Action</th>
       </tr></thead>
       <tbody>${products.map(product => {
         const image = JN.safeUrl(product.image) || 'assets/product-placeholder.svg';
@@ -612,6 +630,9 @@
           <td>${stock <= 0 ? '<span class="low-stock">Out of stock</span>' : stock <= 10 ? `<span class="low-stock">${stock} left</span>` : stock}</td>
           <td>${status}</td>
           <td>${JN.esc(JN.formatDate(product.created_at))}</td>
+          <td class="is-right">
+            <button type="button" class="btn ${product.deleted ? 'btn-primary' : 'btn-ghost'} btn-sm" data-action="toggle-product-archive" data-id="${JN.esc(product.id)}" data-archived="${product.deleted ? 'true' : 'false'}">${product.deleted ? 'Restore' : 'Archive'}</button>
+          </td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
@@ -706,9 +727,69 @@
         }).join('') : '<div class="detail-item"><span>No line items recorded.</span></div>'}
       </div>
       <div class="detail-total"><span>Order total</span><strong>${JN.formatPrice(order.total)}</strong></div>
+      <h4 class="detail-section-title">Update status</h4>
+      <div class="form-actions">
+        <label class="sr-only" for="adminOrderStatusSelect">Order status</label>
+        <select id="adminOrderStatusSelect" class="select-field" aria-label="Order status">
+          ${['pending', 'confirmed', 'processing', 'delivered', 'cancelled'].map(status =>
+            `<option value="${status}"${lower(order.status) === status ? ' selected' : ''}>${status.charAt(0).toUpperCase() + status.slice(1)}</option>`
+          ).join('')}
+        </select>
+        <button type="button" class="btn btn-primary btn-sm" data-action="update-order-status" data-id="${JN.esc(order.id)}">Save status</button>
+      </div>
+      <p class="field-hint mt-sm">Customers and vendors see status changes immediately.</p>
     `;
 
     JN.openModal('orderDetailModal');
+  }
+
+  // Moderation changes go through the server endpoint first. It verifies the
+  // administrator token and works even while database policies are being
+  // applied. If the endpoint is not deployed, fall back to the direct
+  // Supabase client using the signed-in admin session.
+  async function adminAction(action, id, payload, fallback) {
+    let token = '';
+    try {
+      const { data } = await JN.client.auth.getSession();
+      token = data && data.session && data.session.access_token;
+    } catch (error) {
+      token = '';
+    }
+
+    if (token) {
+      try {
+        const response = await fetch('/api/admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(Object.assign({ action, id }, payload || {}))
+        });
+        if (response.ok) {
+          const text = await response.text();
+          try {
+            const body = text ? JSON.parse(text) : null;
+            return body && body.data ? body.data : true;
+          } catch (parseError) {
+            // Not a JSON API response (for example a static rewrite).
+          }
+        } else if (![404, 503].includes(response.status)) {
+          let message = 'The change could not be saved.';
+          try {
+            const body = await response.json();
+            if (body && body.error) message = body.error;
+          } catch (parseError) {
+            message = 'The change could not be saved.';
+          }
+          throw new Error(message);
+        }
+      } catch (error) {
+        if (!(error instanceof TypeError)) throw error;
+      }
+    }
+
+    return fallback();
   }
 
   async function setVendorVerified(vendorId, verified) {
@@ -719,18 +800,149 @@
 
     JN.showLoading(verified ? 'Verifying vendor…' : 'Updating vendor…');
     try {
-      const { data, error } = await JN.client.from('vendors')
-        .update({ verified })
-        .eq('id', vendorId)
-        .select('id,verified')
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error('Vendor not found or you do not have permission to update it.');
+      await adminAction('vendor.verify', vendorId, { verified }, async () => {
+        const { data, error } = await JN.client.from('vendors')
+          .update({ verified })
+          .eq('id', vendorId)
+          .select('id,verified')
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('Vendor not found or you do not have permission to update it.');
+        return data;
+      });
       JN.toast(verified ? 'Vendor verified.' : 'Vendor verification removed.', 'success');
       await loadData({ silent: true });
     } catch (error) {
       console.error('Vendor verification update failed:', error);
       JN.toast('Could not update the vendor: ' + (error.message || 'Unknown error'), 'danger');
+    } finally {
+      JN.hideLoading();
+    }
+  }
+
+  async function setVendorSuspended(vendorId, suspended) {
+    if (!vendorId) return;
+    if (!window.confirm(suspended
+      ? 'Suspend this vendor? Their storefront will stop accepting new business until reactivated.'
+      : 'Reactivate this vendor store?')) {
+      return;
+    }
+
+    JN.showLoading(suspended ? 'Suspending vendor…' : 'Reactivating vendor…');
+    try {
+      await adminAction('vendor.suspend', vendorId, { suspended }, async () => {
+        const { data, error } = await JN.client.from('vendors')
+          .update({ suspended })
+          .eq('id', vendorId)
+          .select('id,suspended')
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('This vendor could not be updated. Check the admin policies in Supabase.');
+        return data;
+      });
+      JN.toast(suspended ? 'Vendor store suspended.' : 'Vendor store reactivated.', 'success');
+      await loadData({ silent: true });
+    } catch (error) {
+      console.error('Vendor suspension update failed:', error);
+      JN.toast('Could not update the vendor: ' + (error.message || 'Unknown error'), 'danger');
+    } finally {
+      JN.hideLoading();
+    }
+  }
+
+  async function setCustomerSuspended(customerId, suspended) {
+    if (!customerId) return;
+    if (!window.confirm(suspended
+      ? 'Suspend this customer? They will be signed out of dashboard access until reactivated.'
+      : 'Reactivate this customer account?')) {
+      return;
+    }
+
+    JN.showLoading(suspended ? 'Suspending customer…' : 'Reactivating customer…');
+    try {
+      await adminAction('customer.suspend', customerId, { suspended }, async () => {
+        const { data, error } = await JN.client.from('customers')
+          .update({ suspended })
+          .eq('id', customerId)
+          .select('id,suspended')
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('This customer could not be updated. Apply the latest admin policies in Supabase.');
+        return data;
+      });
+      JN.toast(suspended ? 'Customer account suspended.' : 'Customer account reactivated.', 'success');
+      await loadData({ silent: true });
+    } catch (error) {
+      console.error('Customer suspension update failed:', error);
+      JN.toast('Could not update the customer: ' + (error.message || 'Unknown error'), 'danger');
+    } finally {
+      JN.hideLoading();
+    }
+  }
+
+  async function setProductArchived(productId, archive) {
+    const product = state.products.find(item => String(item.id) === String(productId));
+    if (!product) return;
+    if (!window.confirm(archive
+      ? `Archive “${product.name || 'this product'}”? It will disappear from the storefront.`
+      : `Restore “${product.name || 'this product'}” to the catalogue?`)) {
+      return;
+    }
+
+    const vendor = state.vendors.find(item => lower(item.email) === lower(product.vendor_email));
+    const restoreStatus = vendor && vendor.verified === false ? 'draft' : 'active';
+    const payload = archive
+      ? { deleted: true, status: 'inactive' }
+      : { deleted: false, status: restoreStatus };
+
+    JN.showLoading(archive ? 'Archiving product…' : 'Restoring product…');
+    try {
+      await adminAction('product.archive', productId, { archived: archive, status: restoreStatus }, async () => {
+        const { data, error } = await JN.client.from('products')
+          .update(payload)
+          .eq('id', productId)
+          .select('id,deleted,status')
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('This product could not be updated. Apply the latest admin policies in Supabase.');
+        return data;
+      });
+      JN.toast(archive ? 'Product archived.' : 'Product restored to the catalogue.', 'success');
+      await loadData({ silent: true });
+    } catch (error) {
+      console.error('Product moderation update failed:', error);
+      JN.toast('Could not update the product: ' + (error.message || 'Unknown error'), 'danger');
+    } finally {
+      JN.hideLoading();
+    }
+  }
+
+  async function setOrderStatus(orderId, status) {
+    if (!orderId || !status) return;
+    const allowed = ['pending', 'confirmed', 'processing', 'delivered', 'cancelled'];
+    if (!allowed.includes(status)) return;
+    if (status === 'cancelled' && !window.confirm('Cancel this order? The customer and vendor will see it as cancelled.')) {
+      return;
+    }
+
+    JN.showLoading('Updating order status…');
+    try {
+      await adminAction('order.status', orderId, { status }, async () => {
+        const { data, error } = await JN.client.from('orders')
+          .update({ status })
+          .eq('id', orderId)
+          .select('id,status')
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('This order could not be updated. Apply the latest admin policies in Supabase.');
+        return data;
+      });
+      JN.closeModal('orderDetailModal');
+      JN.toast('Order marked ' + status + '.', 'success');
+      await loadData({ silent: true });
+    } catch (error) {
+      console.error('Order status update failed:', error);
+      JN.toast('Could not update the order: ' + (error.message || 'Unknown error'), 'danger');
     } finally {
       JN.hideLoading();
     }

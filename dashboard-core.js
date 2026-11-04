@@ -122,13 +122,215 @@
     return String(value == null ? '' : value).replace(/[&<>"']/g, character => ESC_MAP[character]);
   }
 
+  const INLINE_IMAGE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i;
+
+  function isInlineImage(value) {
+    return INLINE_IMAGE.test(String(value || '').trim());
+  }
+
   function safeUrl(value) {
     if (!value) return '';
+    const raw = String(value).trim();
+    if (isInlineImage(raw)) return raw;
     try {
-      const url = new URL(String(value), location.origin);
+      const url = new URL(raw, location.origin);
       return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
     } catch (error) {
       return '';
+    }
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const parts = String(dataUrl || '').split(',');
+    const mime = (parts[0].match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+    const binary = atob(parts[1] || '');
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return new Blob([bytes], { type: mime });
+  }
+
+  function compressImage(file, options) {
+    const settings = Object.assign({
+      maxWidth: 1200,
+      maxHeight: 1200,
+      quality: 0.76,
+      maxBytes: 15 * 1024 * 1024,
+      maxChars: 480000
+    }, options || {});
+
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//i.test(String(file.type || ''))) {
+        reject(new Error('Choose an image file (JPG, PNG, WebP, or GIF).'));
+        return;
+      }
+      if (file.size > settings.maxBytes) {
+        reject(new Error('That image is too large. Choose a file under 15 MB.'));
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        try {
+          const width = image.naturalWidth || image.width;
+          const height = image.naturalHeight || image.height;
+          if (!width || !height) throw new Error('This image could not be read.');
+
+          let targetWidth = Math.max(1, Math.round(width * Math.min(1, settings.maxWidth / width, settings.maxHeight / height)));
+          let targetHeight = Math.max(1, Math.round(height * Math.min(1, settings.maxWidth / width, settings.maxHeight / height)));
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('Image processing is not available in this browser.');
+
+          let dataUrl = '';
+          let quality = settings.quality;
+
+          // Shrink dimensions as well as quality when a tight size cap is
+          // requested (for example the inline avatar fallback).
+          for (let attempt = 0; attempt < 8; attempt += 1) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, targetWidth, targetHeight);
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
+            context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+            quality = settings.quality;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+            while (dataUrl.length > settings.maxChars && quality > 0.5) {
+              quality -= 0.08;
+              dataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+            if (dataUrl.length <= settings.maxChars || targetWidth <= 48 || targetHeight <= 48) break;
+            targetWidth = Math.max(48, Math.round(targetWidth * 0.78));
+            targetHeight = Math.max(48, Math.round(targetHeight * 0.78));
+          }
+
+          resolve({
+            dataUrl,
+            width: targetWidth,
+            height: targetHeight,
+            bytes: Math.round(Math.max(0, dataUrl.length - 23) * 0.75),
+            name: file.name || 'image.jpg'
+          });
+        } catch (error) {
+          reject(error);
+        }
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('This image could not be read. Try another file.'));
+      };
+      image.src = objectUrl;
+    });
+  }
+
+  async function uploadImage(file, options) {
+    const settings = Object.assign({
+      folder: 'media',
+      maxWidth: 1200,
+      maxHeight: 1200,
+      quality: 0.76
+    }, options || {});
+
+    const compressed = await compressImage(file, settings);
+    const folder = String(settings.folder || 'media').replace(/[^a-z0-9-]/gi, '').slice(0, 40) || 'media';
+    let publicUrl = compressed.dataUrl;
+    let storagePath = '';
+    let stored = false;
+
+    if (client && state.user && state.user.id) {
+      // Prefer the server upload endpoint. It keeps the service key off the
+      // client and works even while Storage RLS policies are being applied.
+      try {
+        const { data: sessionData } = await client.auth.getSession();
+        const token = sessionData && sessionData.session && sessionData.session.access_token;
+        if (token) {
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ image: compressed.dataUrl, folder })
+          });
+          if (response.ok) {
+            const payload = await response.json();
+            if (payload && payload.url) {
+              publicUrl = payload.url;
+              storagePath = payload.path || '';
+              stored = true;
+            }
+          } else if (![404, 503].includes(response.status)) {
+            console.warn('Server image upload was rejected:', response.status);
+          }
+        }
+      } catch (error) {
+        console.warn('Server image upload unavailable:', error.message || error);
+      }
+
+      if (!stored) {
+        try {
+          const path = `${state.user.id}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.jpg`;
+          const { error } = await client.storage
+            .from('site-media')
+            .upload(path, dataUrlToBlob(compressed.dataUrl), {
+              contentType: 'image/jpeg',
+              cacheControl: '31536000',
+              upsert: false
+            });
+          if (error) throw error;
+          const { data } = client.storage.from('site-media').getPublicUrl(path);
+          if (!data || !data.publicUrl) throw new Error('The image URL could not be created.');
+          publicUrl = data.publicUrl;
+          storagePath = path;
+          stored = true;
+        } catch (error) {
+          // Storage policies can lag behind the app. A compressed inline image
+          // keeps device uploads working until the bucket policies are applied.
+          // Avatars get a much smaller fallback because the URL is stored in
+          // auth metadata.
+          if (settings.fallbackMaxWidth || settings.fallbackMaxChars) {
+            try {
+              const compact = await compressImage(file, {
+                maxWidth: settings.fallbackMaxWidth || settings.maxWidth,
+                maxHeight: settings.fallbackMaxWidth || settings.maxHeight,
+                quality: settings.fallbackQuality || 0.62,
+                maxChars: settings.fallbackMaxChars || 8000
+              });
+              publicUrl = compact.dataUrl;
+            } catch (fallbackError) {
+              console.warn('Inline image fallback failed:', fallbackError.message || fallbackError);
+            }
+          }
+          console.warn('Image upload fell back to an inline image:', error.message || error);
+        }
+      }
+    }
+
+    return {
+      url: publicUrl,
+      path: storagePath,
+      inline: !storagePath,
+      width: compressed.width,
+      height: compressed.height,
+      bytes: compressed.bytes,
+      name: compressed.name
+    };
+  }
+
+  async function deleteUploadedImage(path) {
+    if (!client || !state.user || !path) return false;
+    if (!String(path).startsWith(`${state.user.id}/`)) return false;
+    try {
+      const { error } = await client.storage.from('site-media').remove([path]);
+      return !error;
+    } catch (error) {
+      return false;
     }
   }
 
@@ -341,6 +543,7 @@
       verified: record.verified !== false,
       suspended: Boolean(record.suspended),
       joinedAt: record.joined_at || record.created_at || null,
+      avatar: metadata.avatar || record.avatar || '',
       persisted: Boolean(record.id)
     };
     if (role === 'vendor') {
@@ -350,6 +553,7 @@
       profile.region = record.region || metadata.region || '';
       profile.vendorType = record.vendor_type || metadata.vendorType || '';
       profile.photo = record.photo || metadata.photo || '';
+      profile.avatar = profile.avatar || profile.photo;
       profile.commissionRate = Number(record.commission_rate) || 0;
     } else if (role === 'customer') {
       profile.phone = record.phone || metadata.phone || '';
@@ -551,7 +755,22 @@
     $$('[data-user-first-name]').forEach(element => { element.textContent = firstName; });
     $$('[data-user-email]').forEach(element => { element.textContent = profile.email || ''; });
     $$('[data-user-role]').forEach(element => { element.textContent = meta.label; });
-    $$('[data-user-initials]').forEach(element => { element.textContent = avatarText; });
+    $$('[data-user-initials]').forEach(element => {
+      const avatarUrl = safeUrl(profile.avatar);
+      element.innerHTML = '';
+      if (avatarUrl) {
+        const image = document.createElement('img');
+        image.src = avatarUrl;
+        image.alt = '';
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        element.appendChild(image);
+        element.classList.add('has-photo');
+      } else {
+        element.textContent = avatarText;
+        element.classList.remove('has-photo');
+      }
+    });
     $$('[data-user-phone]').forEach(element => { element.textContent = profile.phone || 'Not added'; });
     $$('[data-user-joined]').forEach(element => { element.textContent = formatDate(profile.joinedAt); });
     $$('[data-user-store]').forEach(element => { element.textContent = profile.storeName || profile.name || ''; });
@@ -1014,6 +1233,10 @@
     categories: CATEGORIES,
     esc,
     safeUrl,
+    isInlineImage,
+    compressImage,
+    uploadImage,
+    deleteUploadedImage,
     formatPrice,
     compactMoney,
     formatDate,
