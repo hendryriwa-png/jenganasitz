@@ -1,9 +1,9 @@
-/* Vendor Dashboard — emerald workspace accent */
+/* Vendor Dashboard — shared gold workspace accent */
 :root {
-  --accent: #10b981;
-  --accent-rgb: 16, 185, 129;
-  --accent-strong: #047857;
-  --accent-soft: #ecfdf5;
-  --accent-text: #047857;
-  --accent-contrast: #ffffff;
+  --accent: #f59e0b;
+  --accent-rgb: 245, 158, 11;
+  --accent-strong: #d97706;
+  --accent-soft: #fff7e6;
+  --accent-text: #b45309;
+  --accent-contrast: #0f172a;
 }
