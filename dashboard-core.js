@@ -18,8 +18,6 @@
       roleLabel: 'Admin',
       workspace: 'Admin workspace',
       title: 'Admin Console',
-      url: '/admin',
-      switchLabel: 'Admin console',
       audience: 'administrator',
       destination: 'the admin console',
       gateTitle: 'Run the marketplace with confidence.',
@@ -31,8 +29,6 @@
       roleLabel: 'Vendor',
       workspace: 'Vendor workspace',
       title: 'Vendor Dashboard',
-      url: '/vendor',
-      switchLabel: 'Vendor dashboard',
       audience: 'vendor',
       destination: 'your vendor dashboard',
       gateTitle: 'Grow your store, one order at a time.',
@@ -44,8 +40,6 @@
       roleLabel: 'Customer',
       workspace: 'Customer account',
       title: 'My Account',
-      url: '/customer',
-      switchLabel: 'Customer account',
       audience: 'customer',
       destination: 'your account',
       gateTitle: 'Everything you ordered, in one place.',
@@ -657,7 +651,7 @@
     if (!overlay) return;
     overlay.classList.remove('open');
     overlay.setAttribute('aria-hidden', 'true');
-    if (!$$('.modal-overlay.open').length) document.body.classList.remove('modal-open');
+    unlockScrollIfIdle();
     if (state.lastFocused && typeof state.lastFocused.focus === 'function') {
       state.lastFocused.focus();
       state.lastFocused = null;
@@ -671,7 +665,18 @@
     if (sidebar) sidebar.classList.remove('open');
     if (backdrop) backdrop.hidden = true;
     if (toggle) toggle.setAttribute('aria-expanded', 'false');
-    document.body.classList.remove('sidebar-locked');
+    unlockScrollIfIdle();
+  }
+
+  // A modal or the mobile sidebar can leave the page scroll-locked if it is
+  // removed by a view change or a failed request. This restores scrolling
+  // whenever nothing is actually open.
+  function unlockScrollIfIdle() {
+    if (!$$('.modal-overlay.open').length) document.body.classList.remove('modal-open');
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar || !sidebar.classList.contains('open')) {
+      document.body.classList.remove('sidebar-locked');
+    }
   }
 
   function openSidebar() {
@@ -825,18 +830,6 @@
     </main>`;
   }
 
-  function gateSwitchLinks() {
-    return `<div class="gate-switch">
-      <span>Other workspaces</span>
-      <div class="gate-switch-links">
-        ${Object.entries(ROLE_META)
-          .filter(([role]) => role !== state.role)
-          .map(([role, meta]) => `<a href="${meta.url}">${esc(meta.switchLabel)}</a>`)
-          .join('')}
-      </div>
-    </div>`;
-  }
-
   function setGateRoot(html) {
     const root = document.getElementById('gateRoot');
     const shell = document.getElementById('appShell');
@@ -858,7 +851,6 @@
 
   function showSignIn(notice) {
     const meta = ROLE_META[state.role];
-    const otherLinks = gateSwitchLinks();
     setGateRoot(gateShell(`<div class="gate-card">
       <div class="gate-card-head">
         <span class="gate-kicker">Secure sign-in</span>
@@ -885,7 +877,6 @@
         <a href="/">Back to marketplace</a>
         <a href="mailto:info@jenganasi.co.tz">Need help?</a>
       </div>
-      ${otherLinks}
     </div>`));
 
     const form = document.getElementById('gateSignInForm');
@@ -979,21 +970,19 @@
   }
 
   function renderAccessDenied(profile) {
-    const own = ROLE_META[profile.role] || ROLE_META.customer;
     const expected = ROLE_META[state.role];
+    const actual = ROLE_META[profile.role] || ROLE_META.customer;
     setGateRoot(gateShell(`<div class="gate-card">
       <div class="gate-card-head">
         <span class="gate-kicker">Account mismatch</span>
         <h2>This is the ${esc(expected.audience)} workspace</h2>
-        <p>You are signed in, but this page is reserved for ${esc(expected.audience)} accounts.</p>
+        <p>You are signed in as a ${esc(actual.label.toLowerCase())}. Sign out and sign in with a ${esc(expected.audience)} account to open this workspace.</p>
       </div>
       ${gateAccount(profile)}
       <div class="gate-actions">
-        <a class="btn btn-primary btn-lg" href="${own.url}">Open ${esc(own.switchLabel)}</a>
-        <button type="button" class="btn btn-outline" data-action="switch-account">Sign out &amp; switch account</button>
+        <button type="button" class="btn btn-primary btn-lg" data-action="switch-account">Sign out &amp; try another account</button>
+        <a class="btn btn-outline" href="/">Back to marketplace</a>
       </div>
-      <a class="gate-back" href="/">Back to marketplace</a>
-      ${gateSwitchLinks()}
     </div>`));
   }
 
@@ -1194,7 +1183,10 @@
 
     global.addEventListener('resize', () => {
       if (global.innerWidth > 1024) closeSidebar();
+      unlockScrollIfIdle();
     });
+
+    global.addEventListener('pageshow', unlockScrollIfIdle);
 
     if (client) {
       client.auth.onAuthStateChange(event => {
@@ -1220,6 +1212,7 @@
     renderSplash();
     initShell();
     bindGlobalEvents();
+    unlockScrollIfIdle();
     checkSession();
   }
 

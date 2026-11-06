@@ -55,6 +55,9 @@ let supabaseAvailable = true;
 let regDocData = {};
 let vendorUploadedImage = null;
 let vendorsExpanded = false;
+let categoriesOpen = false;
+const PRODUCT_PAGE_SIZE = 12;
+let productLimit = PRODUCT_PAGE_SIZE;
 
 // ============ UTILITY FUNCTIONS ============
 function formatPrice(amount) {
@@ -1220,6 +1223,7 @@ function renderProducts() {
   updateProductsHeader(filtered.length);
 
   if (filtered.length === 0) {
+    updateLoadMoreControls(0, 0);
     const filtersActive = Boolean(activeFilters.search || activeFilters.category || activeFilters.vendor);
     const label = activeFilters.search
       ? `“${esc(activeFilters.search)}”`
@@ -1240,7 +1244,8 @@ function renderProducts() {
     return;
   }
 
-  grid.innerHTML = filtered.map(p => {
+  const visibleProducts = filtered.slice(0, productLimit);
+  grid.innerHTML = visibleProducts.map(p => {
     const rating = Number(p.rating || 0);
     const reviews = Number(p.reviews || 0);
     const stock = Number(p.stock || 0);
@@ -1270,6 +1275,35 @@ function renderProducts() {
       </div>
     </article>`;
   }).join('');
+
+  updateLoadMoreControls(visibleProducts.length, filtered.length);
+}
+
+function updateLoadMoreControls(shown, total) {
+  const wrap = document.getElementById('loadMoreWrap');
+  const btn = document.getElementById('loadMoreBtn');
+  const meta = document.getElementById('loadMoreMeta');
+  if (!wrap || !btn) return;
+
+  const remaining = Math.max(0, total - shown);
+  wrap.hidden = remaining <= 0;
+  if (remaining <= 0) return;
+
+  if (meta) meta.textContent = `Showing ${shown} of ${total} products`;
+  btn.textContent = `Load ${Math.min(PRODUCT_PAGE_SIZE, remaining)} more product${remaining === 1 ? '' : 's'}`;
+}
+
+function loadMoreProducts() {
+  productLimit += PRODUCT_PAGE_SIZE;
+  renderProducts();
+  if (loadMoreVisible()) {
+    document.getElementById('loadMoreBtn')?.focus({preventScroll: true});
+  }
+}
+
+function loadMoreVisible() {
+  const wrap = document.getElementById('loadMoreWrap');
+  return Boolean(wrap && !wrap.hidden);
 }
 
 function renderCategories() {
@@ -1375,6 +1409,7 @@ function parseProductFilters() {
 }
 
 function applyProductFilters() {
+  productLimit = PRODUCT_PAGE_SIZE;
   activeFilters = parseProductFilters();
   renderProducts();
   renderCategories();
@@ -1394,12 +1429,30 @@ function setProductFilters(filters) {
   if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
+function setCategoryPanel(open) {
+  const grid = document.getElementById('categoriesGrid');
+  const toggle = document.getElementById('categoryToggle');
+  if (!grid || !toggle) return;
+  categoriesOpen = Boolean(open);
+  grid.hidden = !categoriesOpen;
+  toggle.setAttribute('aria-expanded', String(categoriesOpen));
+  const label = toggle.querySelector('.category-toggle-label');
+  if (label) label.textContent = categoriesOpen ? 'Hide categories' : 'Browse categories';
+}
+
+function toggleCategories() {
+  setCategoryPanel(!categoriesOpen);
+}
+
 function filterByCategory(categoryId) {
+  // Collapse the picker after a choice so the catalogue stays front and centre.
+  setCategoryPanel(false);
   setProductFilters({category: categoryId});
 }
 
 function clearProductFilters(event) {
   if (event) event.preventDefault();
+  setCategoryPanel(false);
   history.pushState(null, '', '#products');
   applyProductFilters();
   const section = document.getElementById('products');
@@ -1766,6 +1819,7 @@ document.getElementById('heroSearch')?.addEventListener('keypress', (e) => {
 
 document.getElementById('sortSelect')?.addEventListener('change', (e) => {
   currentSort = e.target.value;
+  productLimit = PRODUCT_PAGE_SIZE;
   renderProducts();
 });
 
@@ -1838,9 +1892,22 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
   activeFilters = parseProductFilters();
+  setCategoryPanel(false);
   loadSession();
   updateAuthUI();
   restoreSession();
+
+  document.addEventListener('click', (event) => {
+    if (!categoriesOpen) return;
+    if (event.target.closest('#categories')) return;
+    setCategoryPanel(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !categoriesOpen) return;
+    setCategoryPanel(false);
+    document.getElementById('categoryToggle')?.focus();
+  });
 
   _supabase.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT' && currentUser) {

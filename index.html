@@ -167,10 +167,18 @@
     <section class="categories" id="categories" aria-labelledby="categories-title">
       <div class="container">
         <header class="section-header">
-          <h2 id="categories-title" class="section-title">Shop by Category</h2>
-          <p class="section-subtitle">Find the right materials for your project</p>
+          <div class="section-header-content">
+            <h2 id="categories-title" class="section-title">Shop by Category</h2>
+            <p class="section-subtitle">Find the right materials for your project</p>
+          </div>
+          <div class="section-actions">
+            <button type="button" class="btn btn-outline category-toggle" id="categoryToggle" aria-expanded="false" aria-controls="categoriesGrid" onclick="toggleCategories()">
+              <span class="category-toggle-label">Browse categories</span>
+              <svg class="category-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
         </header>
-        <div class="categories-grid" id="categoriesGrid"></div>
+        <div class="categories-grid" id="categoriesGrid" hidden></div>
       </div>
     </section>
 
@@ -189,10 +197,14 @@
               <option value="rating">Highest Rated</option>
               <option value="newest">Newest</option>
             </select>
-            <a href="#products" class="btn btn-ghost" onclick="clearProductFilters(event)">View All Products</a>
+            <a href="#products" class="btn btn-ghost" onclick="clearProductFilters(event)">Clear filters</a>
           </div>
         </header>
         <div class="products-grid" id="productsGrid"></div>
+        <div class="load-more-wrap" id="loadMoreWrap" hidden>
+          <p class="load-more-meta" id="loadMoreMeta" aria-live="polite"></p>
+          <button type="button" class="btn btn-outline btn-lg" id="loadMoreBtn" onclick="loadMoreProducts()">Load more products</button>
+        </div>
       </div>
     </section>
 
