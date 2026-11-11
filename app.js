@@ -1795,56 +1795,22 @@ function initHeroSlides() {
   const slides = Array.from(root.querySelectorAll('.hero-slide'));
   const progressButtons = Array.from(root.querySelectorAll('.hero-progress-btn'));
   const stage = root.querySelector('.hero-slides');
-  const prevBtn = document.getElementById('heroPrev');
-  const nextBtn = document.getElementById('heroNext');
-  const toggleBtn = document.getElementById('heroToggle');
   if (slides.length < 2) return;
 
-  const pauseIcon = toggleBtn ? toggleBtn.querySelector('.hero-icon-pause') : null;
-  const playIcon = toggleBtn ? toggleBtn.querySelector('.hero-icon-play') : null;
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const canHover = window.matchMedia('(hover: hover)');
-  const AUTO_MS = 7000;
-  const state = {
-    index: 0,
-    paused: reduceMotion.matches,
-    hovered: false,
-    inView: true,
-    timer: null
-  };
-
-  function focusIsInSlide() {
-    return slides.some(slide => slide.contains(document.activeElement));
-  }
-
-  function stopTimer() {
-    if (state.timer) {
-      clearTimeout(state.timer);
-      state.timer = null;
-    }
-  }
-
-  function canAutoPlay() {
-    return !state.paused && !state.hovered && state.inView && !document.hidden && !focusIsInSlide();
-  }
+  let index = 0;
 
   function updateControls() {
-    progressButtons.forEach((button, index) => {
-      const active = index === state.index;
+    progressButtons.forEach((button, buttonIndex) => {
+      const active = buttonIndex === index;
       button.classList.toggle('is-active', active);
       if (active) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
-
-    if (!toggleBtn) return;
-    toggleBtn.setAttribute('aria-label', state.paused ? 'Play slideshow' : 'Pause slideshow');
-    if (pauseIcon) pauseIcon.hidden = state.paused;
-    if (playIcon) playIcon.hidden = !state.paused;
   }
 
   function render() {
-    slides.forEach((slide, index) => {
-      const active = index === state.index;
+    slides.forEach((slide, slideIndex) => {
+      const active = slideIndex === index;
       slide.classList.toggle('is-active', active);
       slide.setAttribute('aria-hidden', active ? 'false' : 'true');
       if (active) slide.removeAttribute('inert');
@@ -1853,62 +1819,20 @@ function initHeroSlides() {
     updateControls();
   }
 
-  function schedule() {
-    stopTimer();
-    if (!canAutoPlay()) return;
-    state.timer = setTimeout(() => {
-      state.timer = null;
-      goTo(state.index + 1);
-    }, AUTO_MS);
-  }
-
-  function goTo(index) {
+  function goTo(nextIndex) {
     const total = slides.length;
-    state.index = ((index % total) + total) % total;
+    index = ((nextIndex % total) + total) % total;
     render();
-    schedule();
   }
 
   function step(delta) {
-    goTo(state.index + delta);
+    goTo(index + delta);
   }
 
   render();
-  schedule();
 
-  if (prevBtn) prevBtn.addEventListener('click', () => step(-1));
-  if (nextBtn) nextBtn.addEventListener('click', () => step(1));
-
-  progressButtons.forEach((button, index) => {
-    button.addEventListener('click', () => goTo(index));
-  });
-
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      state.paused = !state.paused;
-      render();
-      schedule();
-    });
-  }
-
-  if (canHover.matches) {
-    root.addEventListener('mouseenter', () => {
-      state.hovered = true;
-      stopTimer();
-    });
-    root.addEventListener('mouseleave', () => {
-      state.hovered = false;
-      schedule();
-    });
-  }
-
-  root.addEventListener('focusin', () => {
-    if (focusIsInSlide()) stopTimer();
-    else schedule();
-  });
-
-  root.addEventListener('focusout', () => {
-    setTimeout(schedule, 0);
+  progressButtons.forEach((button, buttonIndex) => {
+    button.addEventListener('click', () => goTo(buttonIndex));
   });
 
   root.addEventListener('keydown', (event) => {
@@ -1942,24 +1866,6 @@ function initHeroSlides() {
 
     stage.addEventListener('pointercancel', () => {
       tracking = false;
-    });
-  }
-
-  document.addEventListener('visibilitychange', schedule);
-
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      state.inView = entries.some(entry => entry.isIntersecting);
-      schedule();
-    }, { threshold: 0.12 });
-    observer.observe(root);
-  }
-
-  if (reduceMotion.addEventListener) {
-    reduceMotion.addEventListener('change', (event) => {
-      if (event.matches) state.paused = true;
-      render();
-      schedule();
     });
   }
 }
