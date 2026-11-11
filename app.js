@@ -1142,7 +1142,7 @@ function updateHeroStats() {
   if (badge) {
     badge.textContent = vendorCount
       ? `${vendorCount} verified vendor${vendorCount === 1 ? '' : 's'}`
-      : 'Verified suppliers across Tanzania';
+      : 'Verified suppliers';
   }
 }
 
