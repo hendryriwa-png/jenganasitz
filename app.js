@@ -1141,7 +1141,7 @@ function updateHeroStats() {
   const badge = document.getElementById('heroBadgeText');
   if (badge) {
     badge.textContent = vendorCount
-      ? `${vendorCount} verified vendor${vendorCount === 1 ? '' : 's'} · ${productCount} material${productCount === 1 ? '' : 's'} listed`
+      ? `${vendorCount} verified vendor${vendorCount === 1 ? '' : 's'}`
       : 'Verified suppliers across Tanzania';
   }
 }
@@ -1787,6 +1787,183 @@ function initPush() {
   // placeholder
 }
 
+// ============ HERO SLIDESHOW ============
+function initHeroSlides() {
+  const root = document.getElementById('heroSpotlight');
+  if (!root) return;
+
+  const slides = Array.from(root.querySelectorAll('.hero-slide'));
+  const progressButtons = Array.from(root.querySelectorAll('.hero-progress-btn'));
+  const stage = root.querySelector('.hero-slides');
+  const prevBtn = document.getElementById('heroPrev');
+  const nextBtn = document.getElementById('heroNext');
+  const toggleBtn = document.getElementById('heroToggle');
+  if (slides.length < 2) return;
+
+  const pauseIcon = toggleBtn ? toggleBtn.querySelector('.hero-icon-pause') : null;
+  const playIcon = toggleBtn ? toggleBtn.querySelector('.hero-icon-play') : null;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const canHover = window.matchMedia('(hover: hover)');
+  const AUTO_MS = 7000;
+  const state = {
+    index: 0,
+    paused: reduceMotion.matches,
+    hovered: false,
+    inView: true,
+    timer: null
+  };
+
+  function focusIsInSlide() {
+    return slides.some(slide => slide.contains(document.activeElement));
+  }
+
+  function stopTimer() {
+    if (state.timer) {
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+  }
+
+  function canAutoPlay() {
+    return !state.paused && !state.hovered && state.inView && !document.hidden && !focusIsInSlide();
+  }
+
+  function updateControls() {
+    progressButtons.forEach((button, index) => {
+      const active = index === state.index;
+      button.classList.toggle('is-active', active);
+      if (active) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+
+    if (!toggleBtn) return;
+    toggleBtn.setAttribute('aria-label', state.paused ? 'Play slideshow' : 'Pause slideshow');
+    if (pauseIcon) pauseIcon.hidden = state.paused;
+    if (playIcon) playIcon.hidden = !state.paused;
+  }
+
+  function render() {
+    slides.forEach((slide, index) => {
+      const active = index === state.index;
+      slide.classList.toggle('is-active', active);
+      slide.setAttribute('aria-hidden', active ? 'false' : 'true');
+      if (active) slide.removeAttribute('inert');
+      else slide.setAttribute('inert', '');
+    });
+    updateControls();
+  }
+
+  function schedule() {
+    stopTimer();
+    if (!canAutoPlay()) return;
+    state.timer = setTimeout(() => {
+      state.timer = null;
+      goTo(state.index + 1);
+    }, AUTO_MS);
+  }
+
+  function goTo(index) {
+    const total = slides.length;
+    state.index = ((index % total) + total) % total;
+    render();
+    schedule();
+  }
+
+  function step(delta) {
+    goTo(state.index + delta);
+  }
+
+  render();
+  schedule();
+
+  if (prevBtn) prevBtn.addEventListener('click', () => step(-1));
+  if (nextBtn) nextBtn.addEventListener('click', () => step(1));
+
+  progressButtons.forEach((button, index) => {
+    button.addEventListener('click', () => goTo(index));
+  });
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      state.paused = !state.paused;
+      render();
+      schedule();
+    });
+  }
+
+  if (canHover.matches) {
+    root.addEventListener('mouseenter', () => {
+      state.hovered = true;
+      stopTimer();
+    });
+    root.addEventListener('mouseleave', () => {
+      state.hovered = false;
+      schedule();
+    });
+  }
+
+  root.addEventListener('focusin', () => {
+    if (focusIsInSlide()) stopTimer();
+    else schedule();
+  });
+
+  root.addEventListener('focusout', () => {
+    setTimeout(schedule, 0);
+  });
+
+  root.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    if (document.activeElement && document.activeElement.closest('.hero-slide')) return;
+    event.preventDefault();
+    step(event.key === 'ArrowRight' ? 1 : -1);
+  });
+
+  if (stage) {
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    stage.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') return;
+      startX = event.clientX;
+      startY = event.clientY;
+      tracking = true;
+    });
+
+    stage.addEventListener('pointerup', (event) => {
+      if (!tracking) return;
+      tracking = false;
+      const deltaX = event.clientX - startX;
+      const deltaY = event.clientY - startY;
+      if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        step(deltaX < 0 ? 1 : -1);
+      }
+    });
+
+    stage.addEventListener('pointercancel', () => {
+      tracking = false;
+    });
+  }
+
+  document.addEventListener('visibilitychange', schedule);
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      state.inView = entries.some(entry => entry.isIntersecting);
+      schedule();
+    }, { threshold: 0.12 });
+    observer.observe(root);
+  }
+
+  if (reduceMotion.addEventListener) {
+    reduceMotion.addEventListener('change', (event) => {
+      if (event.matches) state.paused = true;
+      render();
+      schedule();
+    });
+  }
+}
+
 // ============ DASHBOARD NAVIGATION ============
 // The admin, vendor, and customer dashboards are dedicated pages. The main
 // storefront only links to them; access is re-verified on each page.
@@ -1893,6 +2070,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 document.addEventListener('DOMContentLoaded', () => {
   activeFilters = parseProductFilters();
   setCategoryPanel(false);
+  initHeroSlides();
   loadSession();
   updateAuthUI();
   restoreSession();

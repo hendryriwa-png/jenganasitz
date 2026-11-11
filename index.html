@@ -131,34 +131,116 @@
 
   <main id="main-content" tabindex="-1">
     <section class="hero" id="home" aria-labelledby="hero-title">
-      <div class="hero-bg" aria-hidden="true">
-        <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1600&q=80" alt="" loading="eager" fetchpriority="high" width="1600" height="900">
-        <div class="hero-overlay"></div>
-      </div>
       <div class="container">
         <div class="hero-content">
-          <div class="hero-badge">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span id="heroBadgeText">Verified suppliers across Tanzania</span>
-          </div>
-          <h1 id="hero-title" class="hero-title">Build Better with <span class="hero-accent">JengaNasi</span></h1>
-          <p class="hero-subtitle">Compare real prices from verified Tanzanian suppliers, order construction materials, and arrange delivery to your site.</p>
-          <div class="hero-search" role="search">
-            <div class="search-input-wrapper">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="search" id="heroSearch" placeholder="Search cement, steel, roofing, tiles..." autocomplete="off" aria-label="Search products">
+          <div class="hero-copy">
+            <div class="hero-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span id="heroBadgeText">Verified suppliers across Tanzania</span>
             </div>
-            <button class="btn btn-primary btn-lg" id="heroSearchBtn">Search</button>
+            <h1 id="hero-title" class="hero-title">Build Better with <span class="hero-accent">JengaNasi</span></h1>
+            <p class="hero-subtitle">Compare real prices from verified Tanzanian suppliers, order construction materials, and arrange delivery to your site.</p>
+            <div class="hero-search" role="search">
+              <div class="search-input-wrapper">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="search" id="heroSearch" placeholder="Search cement, steel, roofing, tiles..." autocomplete="off" aria-label="Search products">
+              </div>
+              <button class="btn btn-primary btn-lg" id="heroSearchBtn">Search</button>
+            </div>
           </div>
-          <div class="hero-stats">
-            <div class="stat"><span class="stat-value" id="statVendors">—</span><span class="stat-label">Verified Vendors</span></div>
-            <div class="stat"><span class="stat-value" id="statProducts">—</span><span class="stat-label">Products Listed</span></div>
-            <div class="stat"><span class="stat-value" id="statCategories">12</span><span class="stat-label">Categories</span></div>
-            <div class="stat"><span class="stat-value" id="statRegions">—</span><span class="stat-label">Regions Covered</span></div>
+
+          <div class="hero-spotlight" id="heroSpotlight" role="region" aria-roledescription="carousel" aria-label="Featured construction materials">
+            <div class="hero-slides" id="heroSlides">
+              <div class="hero-slide is-active" role="group" aria-roledescription="slide" aria-label="1 of 4">
+                <img src="https://images.unsplash.com/photo-1773394089934-3e29f2a3d6a9?w=900&q=75&auto=format&fit=crop" alt="Stacked cement bags ready for delivery" width="800" height="1200" loading="eager" fetchpriority="high" decoding="async">
+                <div class="hero-slide-shade" aria-hidden="true"></div>
+                <div class="hero-slide-top">
+                  <span class="hero-slide-tag"><span class="hero-slide-dot" aria-hidden="true"></span>Cement &amp; concrete</span>
+                  <span class="hero-slide-index" aria-hidden="true">01 / 04</span>
+                </div>
+                <div class="hero-slide-copy">
+                  <h2>Strong starts, honest prices.</h2>
+                  <p>Trusted cement, blocks, and aggregates from suppliers near your site.</p>
+                  <button class="hero-slide-cta" type="button" onclick="filterByCategory('cement')">Shop cement <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+                </div>
+              </div>
+
+              <div class="hero-slide" role="group" aria-roledescription="slide" aria-label="2 of 4" aria-hidden="true" inert>
+                <img src="https://images.unsplash.com/photo-1530863506128-dc9eb5c3e0fc?w=900&q=75&auto=format&fit=crop" alt="Steel rebar on a construction site" width="800" height="533" loading="lazy" decoding="async">
+                <div class="hero-slide-shade" aria-hidden="true"></div>
+                <div class="hero-slide-top">
+                  <span class="hero-slide-tag"><span class="hero-slide-dot" aria-hidden="true"></span>Steel &amp; rebar</span>
+                  <span class="hero-slide-index" aria-hidden="true">02 / 04</span>
+                </div>
+                <div class="hero-slide-copy">
+                  <h2>Steel that holds the line.</h2>
+                  <p>Quality rebar and structural steel with clear stock and pricing.</p>
+                  <button class="hero-slide-cta" type="button" onclick="filterByCategory('steel')">Shop steel <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+                </div>
+              </div>
+
+              <div class="hero-slide" role="group" aria-roledescription="slide" aria-label="3 of 4" aria-hidden="true" inert>
+                <img src="https://images.unsplash.com/photo-1673645652350-6a4c31c1c78f?w=900&q=75&auto=format&fit=crop" alt="Dark corrugated roofing sheets" width="800" height="1200" loading="lazy" decoding="async">
+                <div class="hero-slide-shade" aria-hidden="true"></div>
+                <div class="hero-slide-top">
+                  <span class="hero-slide-tag"><span class="hero-slide-dot" aria-hidden="true"></span>Roofing &amp; sheets</span>
+                  <span class="hero-slide-index" aria-hidden="true">03 / 04</span>
+                </div>
+                <div class="hero-slide-copy">
+                  <h2>Cover every square metre.</h2>
+                  <p>Durable sheets and tiles delivered across Tanzania.</p>
+                  <button class="hero-slide-cta" type="button" onclick="filterByCategory('roofing')">Shop roofing <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+                </div>
+              </div>
+
+              <div class="hero-slide" role="group" aria-roledescription="slide" aria-label="4 of 4" aria-hidden="true" inert>
+                <img src="https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=900&q=75&auto=format&fit=crop" alt="Modern bathroom finished with large-format tiles" width="800" height="1200" loading="lazy" decoding="async">
+                <div class="hero-slide-shade" aria-hidden="true"></div>
+                <div class="hero-slide-top">
+                  <span class="hero-slide-tag"><span class="hero-slide-dot" aria-hidden="true"></span>Tiles &amp; finishes</span>
+                  <span class="hero-slide-index" aria-hidden="true">04 / 04</span>
+                </div>
+                <div class="hero-slide-copy">
+                  <h2>Finishes that elevate.</h2>
+                  <p>Tiles, paint, and fittings to finish your build beautifully.</p>
+                  <button class="hero-slide-cta" type="button" onclick="filterByCategory('tiles')">Shop tiles <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-slider-bar">
+              <div class="hero-progress" id="heroProgress" role="group" aria-label="Choose a slide">
+                <button type="button" class="hero-progress-btn is-active" aria-label="Show cement and concrete" aria-current="true"><span aria-hidden="true"></span></button>
+                <button type="button" class="hero-progress-btn" aria-label="Show steel and rebar"><span aria-hidden="true"></span></button>
+                <button type="button" class="hero-progress-btn" aria-label="Show roofing and sheets"><span aria-hidden="true"></span></button>
+                <button type="button" class="hero-progress-btn" aria-label="Show tiles and finishes"><span aria-hidden="true"></span></button>
+              </div>
+              <div class="hero-slider-buttons">
+                <button type="button" class="hero-slider-btn" id="heroPrev" aria-label="Previous slide">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <button type="button" class="hero-slider-btn" id="heroToggle" aria-label="Pause slideshow">
+                  <svg class="hero-icon hero-icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                  <svg class="hero-icon hero-icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.5-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14Z"/></svg>
+                </button>
+                <button type="button" class="hero-slider-btn" id="heroNext" aria-label="Next slide">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="hero-trust" id="heroTrust" role="group" aria-label="Featured vendors">
-            <span class="hero-trust-label">Featured vendors</span>
-            <div class="hero-trust-logos" id="heroTrustLogos" aria-hidden="true"></div>
+
+          <div class="hero-meta">
+            <div class="hero-stats">
+              <div class="stat"><span class="stat-value" id="statVendors">—</span><span class="stat-label">Verified Vendors</span></div>
+              <div class="stat"><span class="stat-value" id="statProducts">—</span><span class="stat-label">Products Listed</span></div>
+              <div class="stat"><span class="stat-value" id="statCategories">12</span><span class="stat-label">Categories</span></div>
+              <div class="stat"><span class="stat-value" id="statRegions">—</span><span class="stat-label">Regions Covered</span></div>
+            </div>
+            <div class="hero-trust" id="heroTrust" role="group" aria-label="Featured vendors">
+              <span class="hero-trust-label">Featured vendors</span>
+              <div class="hero-trust-logos" id="heroTrustLogos" aria-hidden="true"></div>
+            </div>
           </div>
         </div>
       </div>
