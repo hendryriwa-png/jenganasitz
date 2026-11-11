@@ -609,6 +609,8 @@
     if (publishNote) publishNote.hidden = Boolean(state.profile && state.profile.verified);
 
     JN.openModal('productModal');
+    const modalBody = form.querySelector('.modal-body');
+    if (modalBody) modalBody.scrollTop = 0;
     const focusField = form.elements.namedItem('productName');
     if (focusField) setTimeout(() => focusField.focus(), 80);
   }

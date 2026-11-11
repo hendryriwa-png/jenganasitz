@@ -330,12 +330,12 @@
   <!-- Auth Modal -->
   <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal-box">
-      <header class="modal-header">
+      <div class="modal-header">
         <h2 class="modal-title" id="authTitle">Welcome to JengaNasi</h2>
         <button class="modal-close" onclick="closeModal('authModal')" aria-label="Close">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-      </header>
+      </div>
       <div class="modal-body">
         <div class="steps-indicator" id="authProgress">
           <div class="step active" data-step="1"><div class="step-circle">1</div><span class="step-label">Role</span></div>
@@ -473,7 +473,7 @@
   <!-- Location Modal -->
   <div class="modal-overlay" id="locationModal" role="dialog" aria-modal="true" aria-labelledby="locationTitle">
     <div class="modal-box">
-      <header class="modal-header"><h2 class="modal-title" id="locationTitle">Your Location</h2><button class="modal-close" onclick="closeModal('locationModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header>
+      <div class="modal-header"><h2 class="modal-title" id="locationTitle">Your Location</h2><button class="modal-close" onclick="closeModal('locationModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
       <div class="modal-body">
         <div class="auth-head"><div class="auth-head-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><h3>Set Your Location</h3><p>Find vendors and products near you</p></div>
         <button type="button" class="btn btn-primary btn-lg btn-block" onclick="useMyLocation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Use My Current Location</button>
@@ -486,30 +486,30 @@
 
   <!-- Forgot Password Modal -->
   <div class="modal-overlay" id="forgotPasswordModal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
-    <div class="modal-box"><header class="modal-header"><h2 class="modal-title" id="forgotTitle">Reset Password</h2><button class="modal-close" onclick="closeModal('forgotPasswordModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body"><form onsubmit="handleForgotPassword(event)"><div class="auth-head"><div class="auth-head-icon">🔒</div><h3>Reset Password</h3><p>Enter your email and we'll send you a link to reset your password</p></div><div class="input-group"><label for="forgotEmail">Email</label><input type="email" id="forgotEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div><button type="submit" class="btn btn-primary btn-lg btn-block">Send Reset Link</button></form><div class="auth-switch" style="margin-top:16px"><button type="button" onclick="closeModal('forgotPasswordModal');openModal('authModal');switchAuthTab('signin')">Back to Sign In</button></div></div></div>
+    <div class="modal-box"><div class="modal-header"><h2 class="modal-title" id="forgotTitle">Reset Password</h2><button class="modal-close" onclick="closeModal('forgotPasswordModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body"><form onsubmit="handleForgotPassword(event)"><div class="auth-head"><div class="auth-head-icon">🔒</div><h3>Reset Password</h3><p>Enter your email and we'll send you a link to reset your password</p></div><div class="input-group"><label for="forgotEmail">Email</label><input type="email" id="forgotEmail" name="email" placeholder="you@example.com" required autocomplete="email"></div><button type="submit" class="btn btn-primary btn-lg btn-block">Send Reset Link</button></form><div class="auth-switch" style="margin-top:16px"><button type="button" onclick="closeModal('forgotPasswordModal');openModal('authModal');switchAuthTab('signin')">Back to Sign In</button></div></div></div>
   </div>
 
   <!-- Reset Password Modal -->
   <div class="modal-overlay" id="resetPasswordModal" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
-    <div class="modal-box"><header class="modal-header"><h2 class="modal-title" id="resetTitle">Set New Password</h2><button class="modal-close" onclick="closeModal('resetPasswordModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body"><form onsubmit="handleResetPassword(event)"><div class="auth-head"><div class="auth-head-icon">🔒</div><h3>Set New Password</h3><p>Your password reset link is valid. Enter your new password below.</p></div><div class="input-group"><label for="resetPassword">New Password</label><input type="password" id="resetPassword" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="8"><div class="pw-strength" id="resetPwStrength"><div class="pw-bar"><div class="pw-fill" id="resetPwFill"></div></div><span class="pw-text" id="resetPwText">At least 8 characters</span></div></div><div class="input-group"><label for="resetConfirm">Confirm Password</label><input type="password" id="resetConfirm" name="confirm" placeholder="••••••••" required autocomplete="new-password"></div><button type="submit" class="btn btn-primary btn-lg btn-block">Update Password</button></form></div></div>
+    <div class="modal-box"><div class="modal-header"><h2 class="modal-title" id="resetTitle">Set New Password</h2><button class="modal-close" onclick="closeModal('resetPasswordModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body"><form onsubmit="handleResetPassword(event)"><div class="auth-head"><div class="auth-head-icon">🔒</div><h3>Set New Password</h3><p>Your password reset link is valid. Enter your new password below.</p></div><div class="input-group"><label for="resetPassword">New Password</label><input type="password" id="resetPassword" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="8"><div class="pw-strength" id="resetPwStrength"><div class="pw-bar"><div class="pw-fill" id="resetPwFill"></div></div><span class="pw-text" id="resetPwText">At least 8 characters</span></div></div><div class="input-group"><label for="resetConfirm">Confirm Password</label><input type="password" id="resetConfirm" name="confirm" placeholder="••••••••" required autocomplete="new-password"></div><button type="submit" class="btn btn-primary btn-lg btn-block">Update Password</button></form></div></div>
   </div>
 
   <!-- Info Modal -->
   <div class="modal-overlay" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
-    <div class="modal-box" style="max-width:640px"><header class="modal-header"><h2 class="modal-title" id="infoTitle"></h2><button class="modal-close" onclick="closeModal('infoModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body" id="infoContent"></div></div>
+    <div class="modal-box" style="max-width:640px"><div class="modal-header"><h2 class="modal-title" id="infoTitle"></h2><button class="modal-close" onclick="closeModal('infoModal')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body" id="infoContent"></div></div>
   </div>
 
   <!-- Product Detail Modal -->
   <div class="modal-overlay" id="productModal" role="dialog" aria-modal="true" aria-labelledby="productTitle">
     <div class="modal-box product-modal-box">
-      <header class="modal-header"><h2 class="modal-title" id="productTitle">Product details</h2><button class="modal-close" onclick="closeModal('productModal')" aria-label="Close product details"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header>
+      <div class="modal-header"><h2 class="modal-title" id="productTitle">Product details</h2><button class="modal-close" onclick="closeModal('productModal')" aria-label="Close product details"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
       <div class="modal-body" id="productContent"></div>
     </div>
   </div>
 
   <!-- Checkout Modal -->
   <div class="modal-overlay" id="checkoutModal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
-    <div class="modal-box" style="max-width:600px"><header class="modal-header"><h2 class="modal-title" id="checkoutTitle">Checkout</h2><button class="modal-close" onclick="closeModal('checkoutModal')" aria-label="Close checkout"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></header><div class="modal-body" id="checkoutContent"></div></div>
+    <div class="modal-box" style="max-width:600px"><div class="modal-header"><h2 class="modal-title" id="checkoutTitle">Checkout</h2><button class="modal-close" onclick="closeModal('checkoutModal')" aria-label="Close checkout"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body" id="checkoutContent"></div></div>
   </div>
 
   <!-- Toast Container -->

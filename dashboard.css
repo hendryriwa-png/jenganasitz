@@ -2298,7 +2298,14 @@ ol {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  height: 100vh;
+  height: 100dvh;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  overflow: hidden;
   background: rgba(2, 6, 23, 0.58);
   backdrop-filter: blur(4px);
 }
@@ -2312,12 +2319,25 @@ ol {
   flex-direction: column;
   width: min(760px, 100%);
   max-height: min(90vh, 880px);
+  max-height: min(100%, 880px);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: var(--radius-xl);
   background: var(--panel);
   box-shadow: var(--shadow-lg);
   animation: modalIn 220ms var(--ease) both;
+}
+
+/* The form is the flexible middle of the modal. Without turning it into a
+   column flex container, the scrolling body cannot shrink and the footer is
+   pushed below the viewport on short screens. */
+.modal-box > form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .modal-box.is-narrow {
@@ -2337,6 +2357,7 @@ ol {
 
 .modal-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
@@ -2380,12 +2401,19 @@ ol {
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px 22px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  scroll-padding-bottom: 16px;
 }
 
 .modal-footer {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
@@ -3138,11 +3166,16 @@ ol {
   }
 
   .modal-overlay {
-    padding: 10px;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
   }
 
   .modal-box {
     max-height: 94vh;
+    max-height: 100%;
     border-radius: 16px;
   }
 
@@ -3200,6 +3233,42 @@ ol {
     right: 12px;
     bottom: 12px;
     width: calc(100vw - 24px);
+  }
+}
+
+/* Short windows and landscape phones: keep the modal inside the visual
+   viewport and trim the chrome so fields and actions stay reachable. */
+@media (max-height: 620px) {
+  .modal-overlay {
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .modal-box {
+    max-height: 100%;
+    border-radius: 14px;
+  }
+
+  .modal-header {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+
+  .modal-body {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .modal-footer {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.05rem;
   }
 }
 
